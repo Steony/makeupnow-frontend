@@ -45,16 +45,11 @@ export default function WelcomeScreen() {
       <View style={styles.container}>
         <Image
           source={require('../assets/images/logo-makeupnow.png')}
-          style={[styles.logoImage, { width: width * 1.2, height: width * 1.2 }]}
+          style={[styles.logoImage, { width: width * 0.9, height: width * 0.9 }]}
           resizeMode="contain"
         />
 
-        {/* L’ellipse en fond */}
-        <Image
-          source={require('../assets/images/Ellipse.png')}
-          style={styles.ellipse}
-          resizeMode="contain"
-        />
+        
 
         <PrimaryButton title="C’est parti !" onPress={handlePress} />
       </View>
@@ -74,14 +69,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  ellipse: {
-    position: 'absolute',
-    top: '60%',
-    left: '40%',
-    width: 290,
-    height: 300,
-    opacity: 0.8,
-  },
+  
   container: {
     flex: 1,
     alignItems: 'center',
@@ -90,15 +78,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   logoImage: {
-    marginBottom: 20,
-    marginTop: 7,
+    marginTop: 70,
     marginRight: 10,
   },
   button: {
     backgroundColor: '#A478DD',
-    borderRadius: 5,
     paddingVertical: 20,
-    paddingHorizontal: 80,
+    paddingHorizontal: 70,
     // Ombre pour iOS
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
