@@ -1,4 +1,5 @@
 // config/api.ts
+
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { getItem } from '../utils/authService';
@@ -11,6 +12,7 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// On intercepte chaque requête pour ajouter automatiquement le JWT si présent
 api.interceptors.request.use(async (config) => {
   const token = await getItem('jwtToken');
   if (token) {

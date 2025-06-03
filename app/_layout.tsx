@@ -9,7 +9,7 @@ export default function RootLayout() {
     <>
       <Stack
         screenOptions={{
-          headerShown: false, // Désactive le header global
+          headerShown: false, 
         }}
       />
         <Toast config={toastConfig} />

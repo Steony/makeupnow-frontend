@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
-import { Image, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+// components/ui/CustomInput.tsx
 
-interface CustomInputProps {
+import React, { useState } from 'react';
+import {
+  Image,
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+interface CustomInputProps extends TextInputProps {
   icon: any;
   placeholder: string;
   value: string;
   onChangeText: (text: string) => void;
   secureTextEntry?: boolean;
   showEyeIcon?: boolean;
+  keyboardType?: TextInputProps['keyboardType'];
 }
 
 export default function CustomInput({
@@ -17,6 +27,8 @@ export default function CustomInput({
   onChangeText,
   secureTextEntry = false,
   showEyeIcon = false,
+  keyboardType = 'default',
+  ...rest
 }: CustomInputProps) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
@@ -34,6 +46,8 @@ export default function CustomInput({
         value={value}
         onChangeText={onChangeText}
         secureTextEntry={secureTextEntry && !isPasswordVisible}
+        keyboardType={keyboardType}
+        {...rest}
       />
       {showEyeIcon && (
         <TouchableOpacity onPress={togglePasswordVisibility}>

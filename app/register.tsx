@@ -1,10 +1,21 @@
+// src/screens/RegisterScreen.tsx
+
 import CheckBox from 'expo-checkbox';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Toast from 'react-native-toast-message';
 import CustomInput from '../components/ui/CustomInput';
-import PrimaryButton from '../components/ui/PrimaryButton';
+import HeaderWithBackButton from '../components/ui/HeaderWithBackButton'; // <== Ajout ici
+import { toastConfig } from '../config/toastConfig';
 import { handleRegister } from '../utils/authService';
 
 export default function RegisterScreen() {
@@ -19,12 +30,27 @@ export default function RegisterScreen() {
   const [mobile, setMobile] = useState('');
   const [isChecked, setIsChecked] = useState(false);
   const [isCertified, setIsCertified] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleUserType = (type: 'Client' | 'Pro') => setUserType(type);
 
-  const onRegister = () => {
-    // Vérification des champs vides
-    if (!prenom || !nom || !email || !password || !adresse || !mobile) {
+  const onRegister = async () => {
+    if (isLoading) return;
+
+    const emailTrimmed   = email.trim();
+    const prenomTrimmed  = prenom.trim();
+    const nomTrimmed     = nom.trim();
+    const adresseTrimmed = adresse.trim();
+    const mobileTrimmed  = mobile.trim();
+
+    if (
+      !prenomTrimmed ||
+      !nomTrimmed ||
+      !emailTrimmed ||
+      !password ||
+      !adresseTrimmed ||
+      !mobileTrimmed
+    ) {
       Toast.show({
         type: 'error',
         text1: 'Erreur',
@@ -33,49 +59,6 @@ export default function RegisterScreen() {
       return;
     }
 
-    // Vérification prénom et nom (min 2 caractères)
-    if (prenom.length < 2 || nom.length < 2) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: 'Le prénom et le nom doivent comporter au moins 2 lettres.',
-      });
-      return;
-    }
-
-    // Vérification email (format)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: 'Veuillez entrer un email valide.',
-      });
-      return;
-    }
-
-    // Vérification mot de passe (recommandation CNIL)
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
-    if (!passwordRegex.test(password)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: 'Le mot de passe doit comporter au moins 8 caractères, avec 1 majuscule, 1 minuscule, 1 chiffre et 1 caractère spécial.',
-      });
-      return;
-    }
-
-    // Vérification adresse et mobile
-    if (adresse.trim().length < 2 || mobile.trim().length < 2) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: 'Veuillez entrer une adresse et un téléphone valides.',
-      });
-      return;
-    }
-
-    // Vérification de la politique de confidentialité
     if (!isChecked) {
       Toast.show({
         type: 'error',
@@ -85,63 +68,124 @@ export default function RegisterScreen() {
       return;
     }
 
-    // Préparation des données pour l'inscription
-    const userData = {
-      email,
-      password,
-      prenom,
-      nom,
-      adresse,
-      mobile,
-      role: userType === 'Pro' ? 'PROVIDER' : 'CUSTOMER',
-      isCertified,
+    if (prenomTrimmed.length < 2 || nomTrimmed.length < 2) {
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: 'Le prénom et le nom doivent comporter au moins 2 lettres.',
+      });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailTrimmed)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: 'Veuillez entrer un email valide.',
+      });
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2:
+          'Le mot de passe doit comporter au moins 8 caractères, ' +
+          'avec 1 majuscule, 1 minuscule, 1 chiffre et 1 caractère spécial.',
+      });
+      return;
+    }
+
+    if (adresseTrimmed.length < 2 || mobileTrimmed.length < 2) {
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: 'Veuillez entrer une adresse et un numéro de téléphone valides.',
+      });
+      return;
+    }
+
+    const baseData = {
+      firstname:   prenomTrimmed,
+      lastname:    nomTrimmed,
+      email:       emailTrimmed,
+      password, 
+      address:     adresseTrimmed,
+      phoneNumber: mobileTrimmed,
+      role:        userType === 'Pro' ? 'PROVIDER' : 'CLIENT',
     };
 
-    // Appel de la méthode centralisée dans authService.ts
-    handleRegister(userData);
+    const userData = baseData;
+
+    console.log('🔔 Appel handleRegister avec :', userData);
+
+    setIsLoading(true);
+    try {
+      await handleRegister(userData);
+    } catch {
+      // handleRegister affiche déjà le toast d'erreur
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Créer un compte</Text>
+      {/* === Header avec bouton Back === */}
+      <HeaderWithBackButton title="Créer un compte" />
 
-        {/* Onglets Client / Pro */}
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* === Onglets “Client” / “Pro” === */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tabButton, userType === 'Client' && styles.tabButtonActive]}
             onPress={() => handleUserType('Client')}
+            disabled={isLoading}
           >
-            <Text style={[styles.tabText, userType === 'Client' && styles.tabTextActive]}>Client</Text>
+            <Text style={[styles.tabText, userType === 'Client' && styles.tabTextActive]}>
+              Client
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.tabButton, userType === 'Pro' && styles.tabButtonActive]}
             onPress={() => handleUserType('Pro')}
+            disabled={isLoading}
           >
-            <Text style={[styles.tabText, userType === 'Pro' && styles.tabTextActive]}>Pro</Text>
+            <Text style={[styles.tabText, userType === 'Pro' && styles.tabTextActive]}>
+              Pro
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Champs */}
+        {/* === Champs du formulaire === */}
         <CustomInput
           icon={require('../assets/images/user.png')}
           placeholder="Prénom"
           value={prenom}
           onChangeText={setPrenom}
+          keyboardType="default"
         />
+
         <CustomInput
           icon={require('../assets/images/user.png')}
           placeholder="Nom"
           value={nom}
           onChangeText={setNom}
+          keyboardType="default"
         />
+
         <CustomInput
           icon={require('../assets/images/mail.png')}
           placeholder="example@email.com"
           value={email}
           onChangeText={setEmail}
+          keyboardType="email-address"
         />
+
         <CustomInput
           icon={require('../assets/images/lock.png')}
           placeholder="•••"
@@ -149,52 +193,81 @@ export default function RegisterScreen() {
           onChangeText={setPassword}
           secureTextEntry
           showEyeIcon
+          keyboardType="default"
         />
+
         <CustomInput
           icon={require('../assets/images/location.png')}
           placeholder="Adresse"
           value={adresse}
           onChangeText={setAdresse}
+          keyboardType="default"
         />
+
         <CustomInput
           icon={require('../assets/images/mobile.png')}
           placeholder="Mobile"
           value={mobile}
           onChangeText={setMobile}
+          keyboardType="phone-pad"
         />
 
-        {/* Checkbox pour la certification (facultatif, affichée uniquement pour Pro) */}
         {userType === 'Pro' && (
           <View style={styles.checkboxContainer}>
-            <CheckBox value={isCertified} onValueChange={setIsCertified} />
+            <CheckBox
+              value={isCertified}
+              onValueChange={setIsCertified}
+              disabled={isLoading}
+            />
             <Text style={styles.checkboxText}>
               J’atteste avoir une certification professionnelle de maquilleur(se) (facultatif)
             </Text>
           </View>
         )}
 
-        {/* Checkbox avec lien vers la politique de confidentialité */}
         <View style={styles.checkboxContainer}>
-          <CheckBox value={isChecked} onValueChange={setIsChecked} />
+          <CheckBox
+            value={isChecked}
+            onValueChange={setIsChecked}
+            disabled={isLoading}
+          />
           <Text style={styles.checkboxText}>
             J’ai lu et j’accepte{' '}
-            <Text style={styles.privacyLink} onPress={() => router.push('/privacy-policy')}>
+            <Text
+              style={styles.privacyLink}
+              onPress={() => router.push('/privacy-policy')}
+            >
               la politique de confidentialité
             </Text>
           </Text>
         </View>
 
-        {/* Bouton d’inscription */}
-        <PrimaryButton title="S’inscrire" onPress={onRegister} />
+        <View style={{ width: '100%', alignItems: 'center', marginBottom: 30 }}>
+          <TouchableOpacity
+            onPress={onRegister}
+            style={[styles.button, isLoading && { opacity: 0.6 }]}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>S’inscrire</Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
-        {/* Lien pour se connecter */}
         <View style={styles.loginContainer}>
           <Text style={styles.loginText}>Déjà un compte ? </Text>
-          <TouchableOpacity onPress={() => router.push('/login')}>
+          <TouchableOpacity
+            onPress={() => router.push('/login')}
+            disabled={isLoading}
+          >
             <Text style={styles.loginLink}>Se connecter</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Toast config={toastConfig} />
     </SafeAreaView>
   );
 }
@@ -210,15 +283,9 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 22,
-    marginBottom: 30,
-    fontWeight: 'bold',
-    color: '#371B34',
-  },
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 35,
     width: '100%',
   },
   tabButton: {
@@ -238,10 +305,12 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#333',
+    fontSize: 16,
   },
   tabTextActive: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 16,
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -257,7 +326,6 @@ const styles = StyleSheet.create({
   },
   loginContainer: {
     flexDirection: 'row',
-    marginTop: 35,
     marginBottom: 30,
   },
   loginText: {
@@ -276,5 +344,23 @@ const styles = StyleSheet.create({
   privacyLink: {
     color: '#64748B',
     textDecorationLine: 'underline',
+  },
+  button: {
+    backgroundColor: '#A478DD',
+    borderRadius: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 60,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.7,
+    shadowRadius: 9,
+    elevation: 5,
+    alignItems: 'center',
+     width: '100%',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 20,
+    fontFamily: 'Inter_400Regular',
   },
 });
