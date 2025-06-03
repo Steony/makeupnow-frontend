@@ -1,36 +1,56 @@
-import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import HeaderGradient from '../../components/ui/HeaderGradient';
-
-// ✅ Import de l’avatar du client uniquement
 import Footer from '@/components/ui/Footer';
+import ProviderCard from '@/components/ui/ProviderCard';
+import { useRouter } from 'expo-router'; // ✅ Ajout pour la navigation
+import React from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 import avatarClient from '../../assets/images/avatarclient.png';
-
-
+import HeaderGradient from '../../components/ui/HeaderGradient';
 
 export default function CustomerHomeScreen() {
   const userFirstname = 'Ralphy';
+  const router = useRouter(); // ✅ Hook pour la navigation
+
+  // Fonction pour aller sur la page du profil du prestataire
+  const handleGoToProfile = () => {
+    router.push('/profile-provider'); // ✅ Redirection vers la page "profile-provider"
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <HeaderGradient
-        title={`Bienvenue ${userFirstname},`}
-        subtitle="Trouvez votre Make up Artist !"
-        avatarUri={avatarClient}
-        showMenu={true}
-        // onPressMenu={() => console.log('Menu pressed')}
-      />
+        <HeaderGradient
+          title={`Bienvenue ${userFirstname},`}
+          subtitle="Trouvez votre Make up Artist !"
+          avatarUri={avatarClient}
+          showMenu={true}
+        />
 
-
-      {/* CONTENU PRINCIPAL */}
-      <View style={styles.content}>
-        <Text style={styles.welcome}>
-          Bienvenue sur votre espace client{'\n'}
-          <Text style={{ color: '#A478DD', fontWeight: 'bold' }}>MAKEUPNOW</Text> !
-        </Text>
-
-      </View>
+        <View style={styles.providersList}>
+          <ProviderCard
+            name="Pat McGrath"
+            imageUri={require('../../assets/images/avatarclient.png')}
+            category="Mariage, Film"
+            address="1 rue gallieni, Bagnolet 93170"
+            rating={4.8}
+            onPressProfile={handleGoToProfile} // 
+          />
+          <ProviderCard
+            name="Charlotte Tilbury"
+            imageUri={require('../../assets/images/avatarclient.png')}
+            category="Edito, TV"
+            address="2 avenue de la république, Bagnolet 93170"
+            rating={4.7}
+            onPressProfile={handleGoToProfile}
+          />
+          <ProviderCard
+            name="Pat McGrath"
+            imageUri={require('../../assets/images/avatarclient.png')}
+            category="Mariage, Film"
+            address="1 rue gallieni, Bagnolet 93170"
+            rating={4.8}
+            onPressProfile={handleGoToProfile}
+          />
+        </View>
       </ScrollView>
       <Footer />
     </SafeAreaView>
@@ -42,9 +62,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF',
   },
-  scrollContainer: {
-    
-  },
+  scrollContainer: {},
   menuRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -53,7 +71,7 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     backgroundColor: '#E1D6EF',
-    borderRadius: 12,
+    borderRadius: 5,
     paddingHorizontal: 32,
     paddingVertical: 16,
     marginHorizontal: 10,
@@ -81,5 +99,8 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     marginHorizontal: 18,
     marginTop: 12,
+  },
+  providersList: {
+    marginTop: 20,
   },
 });

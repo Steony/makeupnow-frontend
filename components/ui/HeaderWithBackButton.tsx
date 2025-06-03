@@ -4,13 +4,15 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface HeaderWithBackButtonProps {
   title: string;
+  avatarUri?: string | number;
 }
 
-export default function HeaderWithBackButton({ title }: HeaderWithBackButtonProps) {
+export default function HeaderWithBackButton({ title, avatarUri }: HeaderWithBackButtonProps) {
   const router = useRouter();
 
   return (
     <View style={styles.headerContainer}>
+      {/* Bouton retour */}
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Image
           source={require('../../assets/images/backbutton.png')}
@@ -18,7 +20,18 @@ export default function HeaderWithBackButton({ title }: HeaderWithBackButtonProp
           resizeMode="contain"
         />
       </TouchableOpacity>
+
+      {/* Titre */}
       <Text style={styles.headerTitle}>{title}</Text>
+
+      {/* Avatar client */}
+      {avatarUri && (
+        <Image
+          source={typeof avatarUri === 'string' ? { uri: avatarUri } : avatarUri}
+          style={styles.avatar}
+          resizeMode="cover"
+        />
+      )}
     </View>
   );
 }
@@ -45,5 +58,11 @@ const styles = StyleSheet.create({
     color: '#371B34',
     textAlign: 'center',
     marginRight: 34, // Décalage pour centrer le titre avec l’icône à gauche
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 18,
+    marginRight: 13, // Espace entre l'avatar et le titre
   },
 });

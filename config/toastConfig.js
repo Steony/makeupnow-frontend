@@ -6,23 +6,27 @@ export const toastConfig = {
       {...props}
       text1NumberOfLines={2}
       text1Style={{
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#000',
       }}
-      text2NumberOfLines={10} // 👈 Augmente le nombre de lignes
+      text2NumberOfLines={10}
       text2Style={{
-        fontSize: 14,
+        fontSize: 20,
         color: '#333',
       }}
       style={{
         borderLeftColor: 'red',
         alignSelf: 'center',
-        width: '95%', // 👈 Augmente encore la largeur
-        minHeight: 100, // 👈 Ajoute une hauteur minimale
+        width: '95%',
+        minHeight: 100,
+        shadowColor: '#000',
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 2,
       }}
       containerStyle={{
-        width: '100%', // 👈 Prend toute la largeur du container parent
+        width: '100%',
         alignSelf: 'center',
       }}
     />
@@ -32,16 +36,21 @@ export const toastConfig = {
       {...props}
       text1NumberOfLines={2}
       text1Style={{
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#000',
       }}
-      text2NumberOfLines={5}
-      text2Style={{ fontSize: 14, color: '#333' }}
+      text2NumberOfLines={10}
+      text2Style={{ fontSize: 20, color: '#333' }}
       style={{
+        borderLeftColor: 'green', 
         width: '95%',
         alignSelf: 'center',
-        minHeight: 80,
+        minHeight: 100,
+        shadowColor: '#000',
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 2,
       }}
       containerStyle={{
         width: '100%',

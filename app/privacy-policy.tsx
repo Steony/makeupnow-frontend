@@ -1,13 +1,13 @@
 import { Inter_400Regular, useFonts } from '@expo-google-fonts/inter';
 import React from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import Footer from '../components/ui/Footer';
 import HeaderWithBackButton from '../components/ui/HeaderWithBackButton';
@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    textAlign: 'justify', // 👈 Pour un alignement à gauche
-  lineHeight: 20, // 👈 Pour améliorer la lisibilité
+    textAlign: 'justify', 
+  lineHeight: 20, 
   },
   sectionTitle: {
     marginTop: 15,

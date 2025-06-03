@@ -160,7 +160,7 @@ export default function HeaderGradient({
   return (
     <>
       <LinearGradient
-        colors={['rgba(205, 162, 244, 0.6)', 'rgb(98, 41, 198)']}
+        colors={['rgba(239, 222, 253, 0.9)', 'rgb(98, 41, 198)']}
         style={styles.gradient}
         start={{ x: 0.8, y: 0.2 }}
         end={{ x: 0.2, y: 1 }}

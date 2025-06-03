@@ -118,7 +118,8 @@ export default function Login() {
         </View>
 
         {/* On affiche le Toast */}
-        <Toast config={toastConfig} />
+        <Toast config={toastConfig} topOffset={150} />
+
       </View>
     </SafeAreaView>
   );

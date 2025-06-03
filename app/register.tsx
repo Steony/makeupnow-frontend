@@ -267,7 +267,7 @@ export default function RegisterScreen() {
         </View>
       </ScrollView>
 
-      <Toast config={toastConfig} />
+       <Toast config={toastConfig} topOffset={150} />
     </SafeAreaView>
   );
 }
