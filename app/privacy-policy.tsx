@@ -6,9 +6,9 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import AppText from '../components/ui/AppText'; // ✅ Ajout de AppText
 import Footer from '../components/ui/Footer';
 import HeaderWithBackButton from '../components/ui/HeaderWithBackButton';
 
@@ -40,51 +40,50 @@ export default function PrivacyPolicyScreen() {
           />
 
           {/* Date de mise à jour */}
-          <Text style={styles.updateDate}>Mise à jour le 25 avril 2025</Text>
+          <AppText style={styles.updateDate}>Mise à jour le 25 avril 2025</AppText>
 
           {/* Texte */}
-          <Text style={styles.text}>
-            <Text style={styles.bold}>Makeup Now</Text> respecte votre vie privée et s’engage à protéger vos
+          <AppText style={styles.text}>
+            <AppText style={styles.bold}>Makeup Now</AppText> respecte votre vie privée et s’engage à protéger vos
             données personnelles.
-          </Text>
+          </AppText>
 
-          <Text style={styles.text}>- Aucune donnée sensible n’est collectée sans votre consentement.</Text>
-          <Text style={styles.text}>
+          <AppText style={styles.text}>- Aucune donnée sensible n’est collectée sans votre consentement.</AppText>
+          <AppText style={styles.text}>
             -  Les données personnelles (nom, email, téléphone, réservations) sont utilisées uniquement pour
             le bon fonctionnement de l’application.
-          </Text>
-          <Text style={styles.text}>-  Aucune donnée n’est vendue, partagée ou transmise à des tiers.</Text>
-          <Text style={styles.text}>
+          </AppText>
+          <AppText style={styles.text}>-  Aucune donnée n’est vendue, partagée ou transmise à des tiers.</AppText>
+          <AppText style={styles.text}>
             -  Les données sont conservées pendant la durée d’utilisation du service, à l’exception des logs
             de connexion qui peuvent être conservés à des fins de sécurité même après suppression du compte
             (anonymisés).
-          </Text>
+          </AppText>
 
-          <Text style={styles.sectionTitle}>Vous pouvez à tout moment :</Text>
-          <Text style={styles.text}>-  Accéder à vos données.</Text>
-          <Text style={styles.text}>-  Demander leur modification ou leur suppression.</Text>
-          <Text style={styles.text}>-  Vous opposer au traitement de vos données.</Text>
-          <Text style={styles.text}>
+          <AppText style={styles.sectionTitle}>Vous pouvez à tout moment :</AppText>
+          <AppText style={styles.text}>-  Accéder à vos données.</AppText>
+          <AppText style={styles.text}>-  Demander leur modification ou leur suppression.</AppText>
+          <AppText style={styles.text}>-  Vous opposer au traitement de vos données.</AppText>
+          <AppText style={styles.text}>
             -  Pour toute demande, contactez-nous par email : steony.pro@gmail.com
-          </Text>
+          </AppText>
 
-          <Text style={styles.sectionTitle}>L’application utilise :</Text>
-          <Text style={styles.text}>-  une connexion sécurisée (HTTPS),</Text>
-          <Text style={styles.text}>-  une authentification via jetons JWT,</Text>
-          <Text style={styles.text}>
+          <AppText style={styles.sectionTitle}>L’application utilise :</AppText>
+          <AppText style={styles.text}>-  une connexion sécurisée (HTTPS),</AppText>
+          <AppText style={styles.text}>-  une authentification via jetons JWT,</AppText>
+          <AppText style={styles.text}>
             -  et un chiffrement des mots de passe pour garantir la sécurité de vos données.
-          </Text>
+          </AppText>
 
-          <Text style={styles.sectionTitle}>Anonymisation des logs d’actions :</Text>
-          <Text style={styles.text}>
+          <AppText style={styles.sectionTitle}>Anonymisation des logs d’actions :</AppText>
+          <AppText style={styles.text}>
             Les logs d’actions des utilisateurs (connexion, modification de compte, etc.) sont conservés
             même après la suppression du compte, mais les informations sensibles sont automatiquement
             anonymisées.
-          </Text>
+          </AppText>
 
           <Footer />
         </ScrollView>
-        
       </View>
     </SafeAreaView>
   );
@@ -111,23 +110,21 @@ const styles = StyleSheet.create({
   },
   updateDate: {
     textAlign: 'center',
-    color: '#64748B',
+    color: '#616161',
     marginBottom: 20,
-    fontFamily: 'Inter_400Regular',
   },
   text: {
-    color: '#371B34',
+    color: '#000',
     marginBottom: 8,
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    textAlign: 'justify', 
-  lineHeight: 20, 
+    textAlign: 'justify',
+    lineHeight: 20,
   },
   sectionTitle: {
     marginTop: 15,
     marginBottom: 5,
     fontWeight: 'bold',
-    color: '#371B34',
+    color: '#000',
   },
   bold: {
     fontWeight: 'bold',

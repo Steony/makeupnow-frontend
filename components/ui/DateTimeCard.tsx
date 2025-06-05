@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import AppText from './AppText';
 
 interface DateTimeCardProps {
   date: string;
@@ -28,7 +29,7 @@ export default function DateTimeCard({
     <View style={styles.container}>
       {/* Date + flèche */}
       <TouchableOpacity style={styles.dateRow} onPress={toggleExpanded}>
-        <Text style={styles.dateText}>{date}</Text>
+        <AppText style={styles.dateText}>{date}</AppText>
         <Image
           source={
             expanded
@@ -54,14 +55,14 @@ export default function DateTimeCard({
                 ]}
                 onPress={() => handleSelectHour(hour)}
               >
-                <Text
+                <AppText
                   style={[
                     styles.hourButtonText,
                     isSelected && styles.hourButtonTextSelected,
                   ]}
                 >
                   {hour}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             );
           })}

@@ -1,14 +1,14 @@
 import { Inter_400Regular, useFonts } from '@expo-google-fonts/inter';
 import React from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
+import AppText from '../components/ui/AppText'; // ✅ Ajout de AppText
 import Footer from '../components/ui/Footer';
 import HeaderWithBackButton from '../components/ui/HeaderWithBackButton';
 
@@ -40,22 +40,22 @@ export default function ContactScreen() {
           />
 
           {/* Texte */}
-          <Text style={styles.text}>
+          <AppText style={styles.text}>
             Pour toute question, suggestion ou demande liée à l’application (y compris la suspension ou la
             suppression de votre compte), vous pouvez nous écrire à l’adresse suivante :
-          </Text>
+          </AppText>
 
-          <Text style={styles.text}>
-            Email : <Text style={styles.italic}>Steony.pro@gmail.com</Text>
-          </Text>
+          <AppText style={styles.text}>
+            Email : <AppText style={styles.italic}>Steony.pro@gmail.com</AppText>
+          </AppText>
 
-          <Text style={styles.text}>
+          <AppText style={styles.text}>
             Une réponse vous sera apportée dans les meilleurs délais.
-          </Text>
+          </AppText>
 
-          <Text style={styles.text}>
+          <AppText style={styles.text}>
             Merci pour votre confiance !
-          </Text>
+          </AppText>
         </ScrollView>
         <Footer />
       </View>
@@ -83,16 +83,15 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   text: {
-    color: '#371B34',
+    color: '#000',
     marginBottom: 8,
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
     textAlign: 'justify',
     lineHeight: 20,
     paddingBottom: 20,
   },
   italic: {
     fontStyle: 'italic',
-    color: '#371B34',
+    color: '#000',
   },
 });

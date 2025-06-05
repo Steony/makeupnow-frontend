@@ -1,5 +1,6 @@
+import AppText from '@/components/ui/AppText'; // 👈 Ajouté pour remplacer <Text>
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 interface ReviewCardProps {
   rating: number;
@@ -13,12 +14,12 @@ export default function ReviewCard({ rating, text, author, date }: ReviewCardPro
     <View style={styles.container}>
       <View style={styles.ratingRow}>
         <Image source={require('../../assets/images/star.png')} style={styles.starIcon} />
-        <Text style={styles.ratingText}>{rating}/5</Text>
+        <AppText style={styles.ratingText}>{rating}/5</AppText>
       </View>
-      <Text style={styles.reviewText}>{text}</Text>
+      <AppText style={styles.reviewText}>{text}</AppText>
       <View style={styles.authorDateRow}>
-        <Text style={styles.author}>{author}</Text>
-        <Text style={styles.date}>(publié le {date})</Text>
+        <AppText style={styles.author}>{author}</AppText>
+        <AppText style={styles.date}>(publié le {date})</AppText>
       </View>
     </View>
   );
@@ -30,7 +31,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginBottom: 8,
-     shadowColor: '#000',
+    shadowColor: '#000',
     shadowOpacity: 0.4,
     shadowRadius: 9,
     shadowOffset: { width: 0, height: 2 },
@@ -49,7 +50,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#000',
-    
   },
   reviewText: {
     marginVertical: 4,

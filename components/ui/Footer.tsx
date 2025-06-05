@@ -1,7 +1,8 @@
 import { Inter_400Regular, useFonts } from '@expo-google-fonts/inter';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
+import AppText from './AppText';
 
 export default function Footer() {
   const router = useRouter();
@@ -22,23 +23,25 @@ export default function Footer() {
     <View style={styles.footerContainer}>
       <View style={styles.linksContainer}>
         <TouchableOpacity onPress={() => router.push('/legal-notice')}>
-          <Text style={styles.link}>Mentions légales</Text>
+          <AppText style={styles.link}>Mentions légales</AppText>
         </TouchableOpacity>
 
-        <Text style={styles.separator}>|</Text>
+        <AppText style={styles.separator}>|</AppText>
 
         <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
-          <Text style={styles.link}>Politique de confidentialité</Text>
+          <AppText style={styles.link}>Politique de confidentialité</AppText>
         </TouchableOpacity>
 
-        <Text style={styles.separator}>|</Text>
+        <AppText style={styles.separator}>|</AppText>
 
         <TouchableOpacity onPress={() => router.push('/contact')}>
-          <Text style={styles.link}>Contact</Text>
+          <AppText style={styles.link}>Contact</AppText>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.copyright}>© 2025 Makeup Now. Tous droits réservés.</Text>
+      <AppText style={styles.copyright}>
+        © 2025 Makeup Now. Tous droits réservés.
+      </AppText>
     </View>
   );
 }
@@ -58,23 +61,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-    flexWrap: 'wrap', // wrap au cas où ça dépasse
+    flexWrap: 'wrap',
   },
   link: {
-    color: '#A478DD',
-    fontFamily: 'Inter_400Regular',
+    color: '#616161',
     fontSize: 12,
     textDecorationLine: 'underline',
     marginHorizontal: 5,
   },
   separator: {
-    color: '#A478DD',
+    color: '#616161',
     marginHorizontal: 5,
-    fontFamily: 'Inter_400Regular',
   },
   copyright: {
-    color: '#64748B',
-    fontFamily: 'Inter_400Regular',
+    color: '#616161',
     fontSize: 12,
   },
 });

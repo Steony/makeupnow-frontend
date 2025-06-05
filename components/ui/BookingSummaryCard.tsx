@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+import AppText from './AppText'; // ✅ Ajout d'AppText
 
 interface BookingSummaryCardProps {
   date: string;
@@ -22,14 +23,14 @@ export default function BookingSummaryCard({
 }: BookingSummaryCardProps) {
   return (
     <View style={styles.card}>
-      <Text style={styles.date}>{date}</Text>
+      <AppText style={styles.date}>{date}</AppText>
 
       <View style={styles.row}>
         <Image
           source={require('../../assets/images/userbooking.png')}
           style={styles.icon}
         />
-        <Text style={styles.text}>Maquilleuse : {provider}</Text>
+        <AppText style={styles.text}>Maquilleuse : {provider}</AppText>
       </View>
 
       <View style={styles.row}>
@@ -37,7 +38,7 @@ export default function BookingSummaryCard({
           source={require('../../assets/images/booking.png')}
           style={styles.icon}
         />
-        <Text style={styles.text}>Prestation : {service}</Text>
+        <AppText style={styles.text}>Prestation : {service}</AppText>
       </View>
 
       <View style={styles.row}>
@@ -45,7 +46,7 @@ export default function BookingSummaryCard({
           source={require('../../assets/images/locationbooking.png')}
           style={styles.icon}
         />
-        <Text style={styles.text}>Lieu : {address}</Text>
+        <AppText style={styles.text}>Lieu : {address}</AppText>
       </View>
 
       <View style={styles.row}>
@@ -53,12 +54,12 @@ export default function BookingSummaryCard({
           source={require('../../assets/images/clock.png')}
           style={styles.icon}
         />
-        <Text style={styles.text}>Durée : {duration}</Text>
+        <AppText style={styles.text}>Durée : {duration}</AppText>
       </View>
 
-      <Text style={[styles.text, styles.clientText]}>Pour : {clientName}</Text>
+      <AppText style={[styles.text, styles.clientText]}>Pour : {clientName}</AppText>
 
-      <Text style={styles.price}>Total: {price} €</Text>
+      <AppText style={styles.price}>Total: {price} €</AppText>
     </View>
   );
 }

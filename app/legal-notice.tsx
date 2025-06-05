@@ -7,9 +7,9 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
-  Text,
-  View
+  View,
 } from 'react-native';
+import AppText from '../components/ui/AppText'; // ✅ Ajout de AppText pour la police par défaut
 import Footer from '../components/ui/Footer';
 import HeaderWithBackButton from '../components/ui/HeaderWithBackButton';
 
@@ -43,32 +43,32 @@ export default function LegalNoticeScreen() {
           />
 
           {/* Texte */}
-          <Text style={styles.text}>
-            <Text style={styles.bold}>Makeup Now</Text>, est éditée dans le cadre d’un projet personnel de développement.
-          </Text>
+          <AppText style={styles.text}>
+            <AppText style={styles.bold}>Makeup Now</AppText>, est éditée dans le cadre d’un projet personnel de développement.
+          </AppText>
 
-          <Text style={styles.text}>
-            Développeuse : <Text style={styles.italic}>Stéphanie NGUYEN</Text>{'\n'}
-            Localisation : <Text style={styles.italic}>Orly, France</Text>{'\n'}
-            Contact : <Text style={styles.italic}>Steony.pro@gmail.com</Text>
-          </Text>
+          <AppText style={styles.text}>
+            Développeuse : <AppText style={styles.italic}>Stéphanie NGUYEN</AppText>{'\n'}
+            Localisation : <AppText style={styles.italic}>Orly, France</AppText>{'\n'}
+            Contact : <AppText style={styles.italic}>Steony.pro@gmail.com</AppText>
+          </AppText>
 
-          <Text style={styles.text}>
+          <AppText style={styles.text}>
             Les contenus et visuels présents sur cette application sont protégés.
-          </Text>
-          <Text style={styles.text}>
+          </AppText>
+          <AppText style={styles.text}>
             Toute reproduction est interdite sans autorisation.
-          </Text>
+          </AppText>
 
-          <Text style={styles.text}>
+          <AppText style={styles.text}>
             Pour toute question ou réclamation, veuillez utiliser la page{' '}
-            <Text
+            <AppText
               style={styles.link}
               onPress={() => router.push('/contact')}
             >
               [Contact]
-            </Text>.
-          </Text>
+            </AppText>.
+          </AppText>
         </ScrollView>
         <Footer />
       </View>
@@ -96,10 +96,9 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   text: {
-    color: '#371B34',
+    color: '#000',
     marginBottom: 8,
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
     textAlign: 'justify',
     lineHeight: 20,
     paddingBottom: 20,
@@ -110,11 +109,11 @@ const styles = StyleSheet.create({
   },
   italic: {
     fontStyle: 'italic',
-    color: '#371B34',
+    color: '#000',
   },
   link: {
     textDecorationLine: 'underline',
-    color: '#A478DD', 
+    color: '#A478DD',
     fontWeight: 'bold',
   },
 });

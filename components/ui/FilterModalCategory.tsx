@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import {
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
+import AppText from './AppText';
 
 interface FilterModalCategoryProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (selectedCategories: string[]) => void; // Modification pour renvoyer un tableau
+  onSelect: (selectedCategories: string[]) => void;
 }
 
 export default function FilterModalCategory({
@@ -21,7 +21,7 @@ export default function FilterModalCategory({
   onClose,
   onSelect,
 }: FilterModalCategoryProps) {
-  const [isMoreVisible, setIsMoreVisible] = useState(true); // Par défaut, on affiche
+  const [isMoreVisible, setIsMoreVisible] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const categories = [
@@ -60,7 +60,7 @@ export default function FilterModalCategory({
           <TouchableWithoutFeedback>
             <View style={styles.container}>
               <View style={styles.headerRow}>
-                <Text style={styles.title}>Catégorie</Text>
+                <AppText style={styles.title}>Catégorie</AppText>
                 <TouchableOpacity onPress={() => setIsMoreVisible(!isMoreVisible)}>
                   <Image
                     source={require('../../assets/images/more.png')}
@@ -78,22 +78,19 @@ export default function FilterModalCategory({
                         style={styles.item}
                         onPress={() => toggleCategory(category)}
                       >
-                        {/* Le check à gauche */}
                         {selectedCategories.includes(category) && (
-                          <Text style={styles.checkIcon}>✔️</Text>
+                          <AppText style={styles.checkIcon}>✔️</AppText>
                         )}
-                        {/* Le texte du titre */}
-                        <Text style={styles.itemText}>{category}</Text>
+                        <AppText style={styles.itemText}>{category}</AppText>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
 
-                  {/* Bouton Valider */}
                   <TouchableOpacity
                     style={styles.validateButton}
                     onPress={validateSelection}
                   >
-                    <Text style={styles.validateButtonText}>Valider</Text>
+                    <AppText style={styles.validateButtonText}>Valider</AppText>
                   </TouchableOpacity>
                 </>
               )}
@@ -119,11 +116,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 15,
     elevation: 5,
-    shadowColor: '#000', // Couleur de l'ombre
-    shadowOffset: { width: 0, height: 3 }, // Décalage
-    shadowOpacity: 0.2, // Opacité
-    shadowRadius: 4, // Flou
-  
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   headerRow: {
     flexDirection: 'row',
@@ -135,23 +131,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     fontFamily: 'Inter_400Regular',
-    
   },
   moreIcon: {
     width: 24,
     height: 24,
   },
   item: {
-    flexDirection: 'row', // Le check et le texte côte à côte
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start', // Tout à gauche
+    justifyContent: 'flex-start',
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
   itemText: {
     fontSize: 16,
-    marginLeft: 10, // Ajoute un petit espace entre le check et le texte
+    marginLeft: 10,
     fontFamily: 'Inter_400Regular',
   },
   checkIcon: {

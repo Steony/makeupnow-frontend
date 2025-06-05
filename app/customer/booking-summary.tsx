@@ -1,17 +1,17 @@
 // 📁 customer/BookingSummaryScreen.tsx
 
+import AppText from '@/components/ui/AppText'; // ✅ Utiliser AppText
 import BookingSummaryCard from '@/components/ui/BookingSummaryCard';
 import Footer from '@/components/ui/Footer';
 import HeaderWithBackButton from '@/components/ui/HeaderWithBackButton';
-import { useRouter } from 'expo-router'; // ✅ import du router
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import Toast from 'react-native-toast-message'; // ✅ import du Toast
+import { SafeAreaView, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function BookingSummaryScreen() {
-  const router = useRouter(); // ✅ initialiser le router
+  const router = useRouter();
 
-  // ⚙️ Tu peux ici récupérer dynamiquement les données de la réservation
   const bookingDetails = {
     date: 'Mardi 12 octobre à 12h00',
     provider: 'Selena Vega',
@@ -23,18 +23,16 @@ export default function BookingSummaryScreen() {
   };
 
   const handleConfirmReservation = () => {
-    // ✅ Afficher le toast de confirmation
     Toast.show({
       type: 'success',
       text1: 'Réservation confirmée !',
       text2: 'Votre réservation a bien été enregistrée.',
-       topOffset: 100,
+      topOffset: 100,
     });
 
-    // ✅ Redirection vers la page Mes Réservations (tu peux adapter la route)
     setTimeout(() => {
-      router.push('/customer/bookings'); // par exemple vers customer/bookings.tsx
-    }, 1500); // léger délai pour laisser le toast s’afficher
+      router.push('/customer/booking-list');
+    }, 1500);
   };
 
   return (
@@ -45,7 +43,7 @@ export default function BookingSummaryScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.title}>Récapitulatif de la réservation</Text>
+        <AppText style={styles.title}>Récapitulatif de la réservation</AppText>
 
         <BookingSummaryCard
           date={bookingDetails.date}
@@ -59,9 +57,9 @@ export default function BookingSummaryScreen() {
 
         <TouchableOpacity
           style={styles.validateButton}
-          onPress={handleConfirmReservation} // ✅ lie la méthode ici
+          onPress={handleConfirmReservation}
         >
-          <Text style={styles.validateButtonText}>Confirmer ma réservation</Text>
+          <AppText style={styles.validateButtonText}>Confirmer la réservation</AppText>
         </TouchableOpacity>
       </ScrollView>
 

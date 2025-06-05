@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import AppText from './AppText';
 
 interface ProviderCardProps {
   name: string;
@@ -22,25 +23,34 @@ export default function ProviderCard({
     <View style={styles.cardContainer}>
       {/* Avatar + Note */}
       <View style={styles.avatarContainer}>
-        <Image source={typeof imageUri === 'string' ? { uri: imageUri } : imageUri} style={styles.avatar} />
+        <Image
+          source={typeof imageUri === 'string' ? { uri: imageUri } : imageUri}
+          style={styles.avatar}
+        />
         <View style={styles.ratingContainer}>
-          <Image source={require('../../assets/images/star.png')} style={styles.starIcon} />
-          <Text style={styles.ratingText}>{rating.toFixed(1)}/5</Text>
+          <Image
+            source={require('../../assets/images/star.png')}
+            style={styles.starIcon}
+          />
+          <AppText style={styles.ratingText}>{rating.toFixed(1)}/5</AppText>
         </View>
       </View>
 
       {/* Infos */}
       <View style={styles.infoContainer}>
-        <Text style={styles.name}>{name}</Text>
-        <Text style={styles.category}>{category}</Text>
+        <AppText style={styles.name}>{name}</AppText>
+        <AppText style={styles.category}>{category}</AppText>
 
         <View style={styles.addressRow}>
-          <Image source={require('../../assets/images/locationapi.png')} style={styles.locationIcon} />
-          <Text style={styles.address}>{address}</Text>
+          <Image
+            source={require('../../assets/images/locationapi.png')}
+            style={styles.locationIcon}
+          />
+          <AppText style={styles.address}>{address}</AppText>
         </View>
 
         <TouchableOpacity style={styles.profileButton} onPress={onPressProfile}>
-          <Text style={styles.profileButtonText}>Voir le profil</Text>
+          <AppText style={styles.profileButtonText}>Voir le profil</AppText>
         </TouchableOpacity>
       </View>
     </View>
@@ -110,14 +120,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 18,
-    textAlign: 'justify'
+    textAlign: 'justify',
   },
   address: {
     fontSize: 15,
     color: '#444',
     fontFamily: 'Inter_400Regular',
     marginTop: 9,
-    
   },
   profileButton: {
     backgroundColor: '#A478DD',
@@ -125,7 +134,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 12,
     alignSelf: 'flex-end',
-     shadowColor: '#000',
+    shadowColor: '#000',
     shadowOpacity: 0.5,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
@@ -138,9 +147,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   locationIcon: {
-    width: 30, 
+    width: 30,
     height: 30,
     marginRight: 4,
-     marginTop: 9,
+    marginTop: 9,
   },
 });

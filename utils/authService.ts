@@ -12,11 +12,9 @@ import { api } from '../config/api';
 
 async function getItem(key: string): Promise<string | null> {
   if (Platform.OS === 'web') {
-    // Sur Web → on utilise localStorage
     console.log("📦 getItem (Web) pour clé:", key);
     return window.localStorage.getItem(key);
   } else {
-    // Sur iOS/Android → on utilise SecureStore
     console.log("🔐 getItem (Native) pour clé:", key);
     return await SecureStore.getItemAsync(key);
   }
@@ -37,7 +35,7 @@ async function removeItem(key: string): Promise<void> {
     console.log("📦 removeItem (Web) pour clé:", key);
     window.localStorage.removeItem(key);
   } else {
-    console.log("🔐 removeItem (Native) pour clé:", key);
+    console.log("🔐 removeItem (Native)", key);
     await SecureStore.deleteItemAsync(key);
   }
 }
@@ -61,16 +59,14 @@ export const handleLogin = async (email: string, password: string) => {
     const response = await api.post('/users/login', { email, password });
     const { token } = response.data;
 
-    // On stocke le token
     await setItem('jwtToken', token);
 
-    // On redirige vers l’accueil
     router.push('/');
 
     Toast.show({
       type: 'success',
       text1: 'Succès',
-      text2: 'Connexion réussie ! 🎉',
+      text2: 'Connexion réussie ! ',
     });
   } catch (error: any) {
     console.error('Erreur de connexion :', error);
@@ -106,6 +102,33 @@ export const handleRegister = async (userData: any) => {
       type: 'error',
       text1: 'Erreur',
       text2: message,
+    });
+  }
+};
+
+//
+// handleLogout
+//
+export const handleLogout = async () => {
+  console.log('🔔 handleLogout appelé');
+
+  try {
+    await removeItem('jwtToken');
+
+    // Redirection vers la page de login
+    router.push('/login');
+
+    Toast.show({
+      type: 'success',
+      text1: 'Déconnexion réussie',
+      text2: 'À bientôt ! ',
+    });
+  } catch (error) {
+    console.error('Erreur lors de la déconnexion :', error);
+    Toast.show({
+      type: 'error',
+      text1: 'Erreur',
+      text2: "Impossible de se déconnecter pour l’instant.",
     });
   }
 };

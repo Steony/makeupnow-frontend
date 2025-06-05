@@ -9,11 +9,11 @@ import {
   Image,
   SafeAreaView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
+import AppText from '../components/ui/AppText';
 import CustomInput from '../components/ui/CustomInput';
 import { toastConfig } from '../config/toastConfig';
 import { handleLogin } from '../utils/authService';
@@ -51,11 +51,9 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      // handleLogin (dans authService) gère l’envoi à l’API et affiche un Toast en cas d’erreur
       await handleLogin(emailTrimmed, password);
-      // Si connexion réussie, handleLogin redirige probablement sur l’écran d’accueil.
     } catch {
-      // On suppose que handleLogin a déjà affiché le Toast d’erreur.
+      // handleLogin gère déjà l’affichage des erreurs
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +68,7 @@ export default function Login() {
           resizeMode="contain"
         />
 
-        {/* Champ email : clavier de type “email-address” */}
+        {/* Champ email */}
         <CustomInput
           icon={require('../assets/images/mail.png')}
           placeholder="example@email.com"
@@ -78,10 +76,10 @@ export default function Login() {
           onChangeText={setEmail}
           secureTextEntry={false}
           showEyeIcon={false}
-          keyboardType="email-address"   // ← clavier APPELÉ email-address
+          keyboardType="email-address"
         />
 
-        {/* Champ mot de passe : clavier par défaut + icône “œil” */}
+        {/* Champ mot de passe */}
         <CustomInput
           icon={require('../assets/images/lock.png')}
           placeholder="•••"
@@ -94,7 +92,7 @@ export default function Login() {
 
         <View style={{ width: '100%', alignItems: 'flex-end' }}>
           <TouchableOpacity onPress={() => console.log('Mot de passe oublié')}>
-            <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>
+            <AppText style={styles.forgotPassword}>Mot de passe oublié ?</AppText>
           </TouchableOpacity>
         </View>
 
@@ -106,20 +104,18 @@ export default function Login() {
           {isLoading ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Se connecter</Text>
+            <AppText style={styles.buttonText}>Se connecter</AppText>
           )}
         </TouchableOpacity>
 
         <View style={styles.signupContainer}>
-          <Text style={styles.signupText}>Pas de compte ? </Text>
+          <AppText style={styles.signupText}>Pas de compte ? </AppText>
           <TouchableOpacity onPress={() => router.push('/register')} disabled={isLoading}>
-            <Text style={styles.signupLink}>S’inscrire</Text>
+            <AppText style={styles.signupLink}>S’inscrire</AppText>
           </TouchableOpacity>
         </View>
 
-        {/* On affiche le Toast */}
         <Toast config={toastConfig} topOffset={150} />
-
       </View>
     </SafeAreaView>
   );
@@ -152,7 +148,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 50,
     color: '#A478DD',
-    fontFamily: 'Inter_400Regular',
   },
   button: {
     backgroundColor: '#A478DD',
@@ -170,7 +165,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 20,
-    fontFamily: 'Inter_400Regular',
   },
   signupContainer: {
     flexDirection: 'row',
@@ -178,11 +172,9 @@ const styles = StyleSheet.create({
   },
   signupText: {
     color: '#64748B',
-    fontFamily: 'Inter_400Regular',
   },
   signupLink: {
     color: '#A478DD',
-    fontFamily: 'Inter_400Regular',
     fontWeight: '800',
     fontSize: 15,
     textDecorationLine: 'underline',

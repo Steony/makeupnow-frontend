@@ -1,5 +1,3 @@
-// components/ui/CustomInput.tsx
-
 import React, { useState } from 'react';
 import {
   Image,
@@ -91,6 +89,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 15,
     color: '#371B34',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_400Regular', // ✅ Police cohérente
   },
 });

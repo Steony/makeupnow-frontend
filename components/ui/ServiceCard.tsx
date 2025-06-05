@@ -1,5 +1,6 @@
+import AppText from '@/components/ui/AppText'; // Ajouté pour remplacer <Text>
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface ServiceCardProps {
   title: string;
@@ -24,15 +25,15 @@ export default function ServiceCard({
     <View style={styles.container}>
       {/* Ligne Titre et Prix */}
       <View style={styles.topRow}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.price}>{price}€</Text>
+        <AppText style={styles.title}>{title}</AppText>
+        <AppText style={styles.price}>{price}€</AppText>
       </View>
 
       {/* Catégorie */}
-      <Text style={styles.category}>{category}</Text>
+      <AppText style={styles.category}>{category}</AppText>
 
       {/* Description */}
-      <Text style={styles.description}>{description}</Text>
+      <AppText style={styles.description}>{description}</AppText>
 
       {/* Ligne Durée et Bouton Choisir alignés */}
       <View style={styles.bottomRow}>
@@ -41,7 +42,7 @@ export default function ServiceCard({
             source={require('../../assets/images/clock.png')}
             style={styles.clockIcon}
           />
-          <Text style={styles.duration}>{duration}</Text>
+          <AppText style={styles.duration}>{duration}</AppText>
         </View>
 
         <TouchableOpacity
@@ -51,14 +52,14 @@ export default function ServiceCard({
           ]}
           onPress={onPressChoose}
         >
-          <Text
+          <AppText
             style={[
               styles.chooseButtonText,
               isSelected && styles.chooseButtonTextSelected,
             ]}
           >
             Choisir
-          </Text>
+          </AppText>
         </TouchableOpacity>
       </View>
     </View>

@@ -151,11 +151,12 @@ export default function ProviderProfileScreen() {
               }
             }}
           >
-            <Text style={styles.validateButtonText}>Valider mes choix</Text>
+            <Text style={styles.validateButtonText}>Valider</Text>
           </TouchableOpacity>
 
-          <Footer />
+          
         </ScrollView>
+        <Footer />
       </View>
     </SafeAreaView>
   );
@@ -164,7 +165,7 @@ export default function ProviderProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: '#fff',
   },
   container: {
     flex: 1,
