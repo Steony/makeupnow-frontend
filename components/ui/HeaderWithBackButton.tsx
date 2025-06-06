@@ -1,3 +1,5 @@
+import { useAuth } from '@/utils/AuthContext';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -9,6 +11,16 @@ interface HeaderWithBackButtonProps {
 
 export default function HeaderWithBackButton({ title, avatarUri }: HeaderWithBackButtonProps) {
   const router = useRouter();
+  const { currentUser } = useAuth();
+
+  const defaultAvatar = getDefaultAvatar(
+  (currentUser?.role?.toUpperCase() as 'CLIENT' | 'PROVIDER' | 'ADMIN') || 'CLIENT'
+);
+
+
+
+  const dynamicAvatar =
+    avatarUri || defaultAvatar;
 
   return (
     <View style={styles.headerContainer}>
@@ -24,14 +36,12 @@ export default function HeaderWithBackButton({ title, avatarUri }: HeaderWithBac
       {/* Titre */}
       <Text style={styles.headerTitle}>{title}</Text>
 
-      {/* Avatar client */}
-      {avatarUri && (
-        <Image
-          source={typeof avatarUri === 'string' ? { uri: avatarUri } : avatarUri}
-          style={styles.avatar}
-          resizeMode="cover"
-        />
-      )}
+      {/* Avatar dynamique */}
+      <Image
+        source={typeof dynamicAvatar === 'string' && dynamicAvatar.startsWith('http') ? { uri: dynamicAvatar } : dynamicAvatar}
+        style={styles.avatar}
+        resizeMode="cover"
+      />
     </View>
   );
 }
@@ -42,7 +52,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
     paddingHorizontal: 10,
-    paddingTop: 40, // Pour éviter la zone d'encoche
+    paddingTop: 40,
   },
   backButton: {
     marginRight: 10,
@@ -57,12 +67,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#371B34',
     textAlign: 'center',
-    marginRight: 34, // Décalage pour centrer le titre avec l’icône à gauche
+    marginRight: 34,
   },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 18,
-    marginRight: 13, // Espace entre l'avatar et le titre
+    marginRight: 13,
   },
 });

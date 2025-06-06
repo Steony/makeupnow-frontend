@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { api } from '@/config/api';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   Modal,
@@ -10,10 +11,15 @@ import {
 } from 'react-native';
 import AppText from './AppText';
 
+interface Category {
+  id: number;
+  title: string;
+}
+
 interface FilterModalCategoryProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (selectedCategories: string[]) => void;
+  onSelect: (selectedCategories: Category[]) => void; // ✅
 }
 
 export default function FilterModalCategory({
@@ -22,39 +28,39 @@ export default function FilterModalCategory({
   onSelect,
 }: FilterModalCategoryProps) {
   const [isMoreVisible, setIsMoreVisible] = useState(true);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]); // ✅
 
-  const categories = [
-    'Mariage',
-    'Beauté',
-    'Mode/Editorial',
-    'Tournage',
-    'SFX',
-    'Théâtre',
-    'Enfant',
-    'Homme',
-  ];
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/categories');
+        setCategories(response.data); // ✅ récupère [{id, title}]
+      } catch (error) {
+        console.error('Erreur lors de la récupération des catégories:', error);
+      }
+    };
 
-  const toggleCategory = (category: string) => {
-    if (selectedCategories.includes(category)) {
-      setSelectedCategories(selectedCategories.filter((c) => c !== category));
+    if (visible) {
+      fetchCategories();
+    }
+  }, [visible]);
+
+  const toggleCategory = (category: Category) => {
+    if (selectedCategories.find((c) => c.id === category.id)) {
+      setSelectedCategories(selectedCategories.filter((c) => c.id !== category.id));
     } else {
       setSelectedCategories([...selectedCategories, category]);
     }
   };
 
   const validateSelection = () => {
-    onSelect(selectedCategories);
+    onSelect(selectedCategories); // ✅ renvoie [{id, title}]
     onClose();
   };
 
   return (
-    <Modal
-      animationType="fade"
-      transparent
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
@@ -72,24 +78,21 @@ export default function FilterModalCategory({
               {isMoreVisible && (
                 <>
                   <ScrollView style={{ marginBottom: 10 }}>
-                    {categories.map((category, index) => (
+                    {categories.map((category) => (
                       <TouchableOpacity
-                        key={index}
+                        key={category.id}
                         style={styles.item}
                         onPress={() => toggleCategory(category)}
                       >
-                        {selectedCategories.includes(category) && (
+                        {selectedCategories.find((c) => c.id === category.id) && (
                           <AppText style={styles.checkIcon}>✔️</AppText>
                         )}
-                        <AppText style={styles.itemText}>{category}</AppText>
+                        <AppText style={styles.itemText}>{category.title}</AppText>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
 
-                  <TouchableOpacity
-                    style={styles.validateButton}
-                    onPress={validateSelection}
-                  >
+                  <TouchableOpacity style={styles.validateButton} onPress={validateSelection}>
                     <AppText style={styles.validateButtonText}>Valider</AppText>
                   </TouchableOpacity>
                 </>
@@ -130,7 +133,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'Inter_400Regular',
   },
   moreIcon: {
     width: 24,
@@ -139,7 +141,6 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -147,7 +148,6 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 16,
     marginLeft: 10,
-    fontFamily: 'Inter_400Regular',
   },
   checkIcon: {
     fontSize: 16,

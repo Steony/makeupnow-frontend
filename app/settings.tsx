@@ -2,162 +2,130 @@ import AppText from '@/components/ui/AppText';
 import CustomInput from '@/components/ui/CustomInput';
 import Footer from '@/components/ui/Footer';
 import HeaderWithBackButton from '@/components/ui/HeaderWithBackButton';
-import React, { useState } from 'react';
+import { api } from '@/config/api';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function SettingsScreen() {
-  const [firstName, setFirstName] = useState('Ralph');
-  const [lastName, setLastName] = useState('Wiggum');
-  const [email, setEmail] = useState('Ralph@gmail.com');
+  const router = useRouter();
+
+  // États des données utilisateur
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [phone, setPhone] = useState('0659492231');
+  const [phone, setPhone] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const [address, setAddress] = useState('38 rue des Lilas, 93100 Montreuil France');
+  const [address, setAddress] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
+  const [role, setRole] = useState<'CLIENT' | 'PROVIDER' | 'ADMIN'>('CLIENT');
+  const [id, setId] = useState<number | null>(null);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
 
-  const handleSave = () => {
-    // Logique réelle de sauvegarde ici
-    console.log('Modifications enregistrées !');
-    setConfirmModalVisible(false);
+  // Avatar dynamique basé sur le rôle
+  const defaultAvatar = getDefaultAvatar(role);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await api.get('/users/me');
+        const user = response.data;
+        setId(user.id);
+        setFirstName(user.firstname);
+        setLastName(user.lastname);
+        setEmail(user.email);
+        setPhone(user.phoneNumber || '');
+        setAddress(user.address || '');
+        setRole(user.role || 'CLIENT');
+      } catch (error) {
+        console.error('Erreur lors du chargement des infos user:', error);
+      }
+    };
+    fetchUserData();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        id,
+        firstname: firstName,
+        lastname: lastName,
+        email: newEmail || email,
+        address: newAddress || address,
+        phoneNumber: newPhone || phone,
+      };
+
+      // Inclure le mot de passe seulement s’il est fourni
+      if (currentPassword.trim() !== '') {
+        updateData.password = currentPassword;
+      }
+
+      await api.put('/users/update', updateData);
+      Toast.show({
+        type: 'success',
+        text1: 'Succès',
+        text2: 'Modifications enregistrées.',
+      });
+      setConfirmModalVisible(false);
+    } catch (error) {
+      console.error('Erreur update user:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: "Échec de l'enregistrement.",
+      });
+    }
   };
 
   return (
     <View style={styles.container}>
-      <HeaderWithBackButton
-        title="Paramètres"
-        avatarUri={require('@/assets/images/avatarclient.png')}
-      />
+      <HeaderWithBackButton title="Paramètres" avatarUri={defaultAvatar} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Section Informations personnelles */}
         <AppText style={styles.sectionTitle}>Informations personnelles</AppText>
-        <CustomInput
-          icon={require('@/assets/images/user.png')}
-          placeholder="Prénom"
-          value={firstName}
-          onChangeText={setFirstName}
-        />
-        <CustomInput
-          icon={require('@/assets/images/user.png')}
-          placeholder="Nom"
-          value={lastName}
-          onChangeText={setLastName}
-        />
+        <CustomInput icon={require('@/assets/images/user.png')} placeholder="Prénom" value={firstName} onChangeText={setFirstName} />
+        <CustomInput icon={require('@/assets/images/user.png')} placeholder="Nom" value={lastName} onChangeText={setLastName} />
 
-        {/* Section Email */}
         <AppText style={styles.sectionTitle}>Adresse e-mail</AppText>
-        <CustomInput
-          icon={require('@/assets/images/mail.png')}
-          placeholder="Adresse e-mail actuelle"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-        />
-        <CustomInput
-          icon={require('@/assets/images/mail.png')}
-          placeholder="Nouvelle adresse e-mail"
-          value={newEmail}
-          onChangeText={setNewEmail}
-          keyboardType="email-address"
-        />
+        <CustomInput icon={require('@/assets/images/mail.png')} placeholder="Adresse e-mail actuelle" value={email} onChangeText={setEmail} keyboardType="email-address" />
+        <CustomInput icon={require('@/assets/images/mail.png')} placeholder="Nouvelle adresse e-mail" value={newEmail} onChangeText={setNewEmail} keyboardType="email-address" />
 
-        {/* Section Téléphone */}
         <AppText style={styles.sectionTitle}>Téléphone</AppText>
-        <CustomInput
-          icon={require('@/assets/images/mobile.png')}
-          placeholder="Numéro de téléphone actuel"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-        />
-        <CustomInput
-          icon={require('@/assets/images/mobile.png')}
-          placeholder="Nouveau numéro de téléphone"
-          value={newPhone}
-          onChangeText={setNewPhone}
-          keyboardType="phone-pad"
-        />
+        <CustomInput icon={require('@/assets/images/mobile.png')} placeholder="Numéro actuel" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+        <CustomInput icon={require('@/assets/images/mobile.png')} placeholder="Nouveau numéro" value={newPhone} onChangeText={setNewPhone} keyboardType="phone-pad" />
 
-        {/* Section Adresse */}
         <AppText style={styles.sectionTitle}>Adresse</AppText>
-        <CustomInput
-          icon={require('@/assets/images/locationapi.png')}
-          placeholder="Adresse actuelle"
-          value={address}
-          onChangeText={setAddress}
-        />
-        <CustomInput
-          icon={require('@/assets/images/locationapi.png')}
-          placeholder="Nouvelle adresse"
-          value={newAddress}
-          onChangeText={setNewAddress}
-        />
+        <CustomInput icon={require('@/assets/images/locationapi.png')} placeholder="Adresse actuelle" value={address} onChangeText={setAddress} />
+        <CustomInput icon={require('@/assets/images/locationapi.png')} placeholder="Nouvelle adresse" value={newAddress} onChangeText={setNewAddress} />
 
-        {/* Section Mot de passe */}
-        <AppText style={styles.sectionTitle}>Mot de passe</AppText>
-        <CustomInput
-          icon={require('@/assets/images/lock.png')}
-          placeholder="Mot de passe actuel"
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
-          secureTextEntry
-          showEyeIcon
-        />
-        <CustomInput
-          icon={require('@/assets/images/lock.png')}
-          placeholder="Nouveau mot de passe"
-          value={newPassword}
-          onChangeText={setNewPassword}
-          secureTextEntry
-          showEyeIcon
-        />
-        <CustomInput
-          icon={require('@/assets/images/lock.png')}
-          placeholder="Saisissez à nouveau le mot de passe"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          showEyeIcon
-        />
+        <AppText style={styles.sectionTitle}>Mot de passe requis pour valider</AppText>
+        <CustomInput icon={require('@/assets/images/lock.png')} placeholder="Mot de passe actuel" value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry showEyeIcon />
 
-        {/* Bouton de sauvegarde */}
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={() => setConfirmModalVisible(true)}
-        >
+        <TouchableOpacity style={styles.saveButton} onPress={() => setConfirmModalVisible(true)}>
           <AppText style={styles.saveButtonText}>Enregistrer les modifications</AppText>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.saveButton, { backgroundColor: '#000' }]} onPress={() => router.push('/password-change')}>
+          <AppText style={styles.saveButtonText}>Changer le mot de passe</AppText>
         </TouchableOpacity>
       </ScrollView>
 
       <Footer />
 
-      {/* Modal de confirmation */}
-      <Modal
-        animationType="fade"
-        transparent
-        visible={confirmModalVisible}
-        onRequestClose={() => setConfirmModalVisible(false)}
-      >
+      <Modal animationType="fade" transparent visible={confirmModalVisible} onRequestClose={() => setConfirmModalVisible(false)}>
         <View style={styles.overlay}>
           <View style={styles.modalContainer}>
             <AppText style={styles.modalTitle}>Confirmation</AppText>
             <AppText style={styles.modalText}>Êtes-vous sûr de vouloir modifier vos informations ?</AppText>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                onPress={() => setConfirmModalVisible(false)}
-                style={styles.modalButton}
-              >
+              <TouchableOpacity onPress={() => setConfirmModalVisible(false)} style={styles.modalButton}>
                 <AppText style={styles.modalButtonText}>Annuler</AppText>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSave}
-                style={[styles.modalButton, { backgroundColor: '#a478dd' }]}
-              >
+              <TouchableOpacity onPress={handleSave} style={[styles.modalButton, { backgroundColor: '#a478dd' }]}>
                 <AppText style={[styles.modalButtonText, { color: '#fff' }]}>Oui</AppText>
               </TouchableOpacity>
             </View>
@@ -169,76 +137,16 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#371B34',
-    marginBottom: 10,
-    marginTop: 20,
-  },
-  saveButton: {
-    backgroundColor: '#7946CD',
-    borderRadius: 5,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginVertical: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 9,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: '80%',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 20,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  modalText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  modalButton: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 10,
-    marginHorizontal: 5,
-    borderRadius: 5,
-    backgroundColor: '#ddd',
-  },
-  modalButtonText: {
-    color: '#000',
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  scrollContent: { padding: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#371B34', marginBottom: 10, marginTop: 20 },
+  saveButton: { backgroundColor: '#7946CD', borderRadius: 5, paddingVertical: 15, alignItems: 'center', marginVertical: 10, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 9, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
+  saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { width: '80%', backgroundColor: '#fff', borderRadius: 8, padding: 20, alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  modalText: { fontSize: 16, textAlign: 'center', marginBottom: 20 },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  modalButton: { flex: 1, alignItems: 'center', padding: 10, marginHorizontal: 5, borderRadius: 5, backgroundColor: '#ddd' },
+  modalButtonText: { color: '#000', fontWeight: 'bold' },
 });
-

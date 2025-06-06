@@ -1,23 +1,27 @@
 import AppText from '@/components/ui/AppText';
 import HeaderGradient from '@/components/ui/HeaderGradient';
-import { api } from '@/config/api'; // ✅ Ajouté pour faire la requête
+import { api } from '@/config/api';
+
+
 import { handleLogout } from '@/utils/authService';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-export default function ProfileScreen() {
-  const [userFirstname, setUserFirstname] = useState('Client'); // ✅ Début par défaut
-
+export default function HomeProviderScreen() {
+  const [userFirstname, setUserFirstname] = useState('Provider');
+  
   const router = useRouter();
 
-  // ✅ Récupère le prénom comme dans CustomerHomeScreen
+  // ✅ Avatar statique pour le Provider
+  const providerAvatar = require('@/assets/images/avatarprovider.png');
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
         const response = await api.get('/users/me');
         const { firstname } = response.data;
-        setUserFirstname(firstname ?? 'Client');
+        setUserFirstname(firstname ?? 'Provider');
       } catch (error) {
         console.error('Erreur lors de la récupération du profil :', error);
       }
@@ -26,19 +30,18 @@ export default function ProfileScreen() {
     fetchUserProfile();
   }, []);
 
-  const customerMenuItems = ['Accueil', 'Mes réservations', 'Mon profil', 'Paramètres', 'Déconnexion'];
+  const providerMenuItems = ['Mon dashboard', 'Mes prestations', 'Mon planning', 'Paramètres', 'Déconnexion'];
 
   const handleMenuItemPress = (item: string) => {
-    console.log('Menu Item sélectionné :', item);
     switch (item) {
-      case 'Accueil':
-        router.push('/customer/home');
+      case 'Mon dashboard':
+        router.push('/provider/home');
         break;
-      case 'Mes réservations':
-        router.push('/customer/booking-list');
+      case 'Mes prestations':
+        router.push('/provider/services');
         break;
-      case 'Mon profil':
-        router.push('/customer/profile');
+      case 'Mon planning':
+        router.push('/provider/planning');
         break;
       case 'Paramètres':
         router.push('/settings');
@@ -54,37 +57,46 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <HeaderGradient
-        title={`Bienvenue ${userFirstname},`} // ✅ Affiche bien le prénom
-        subtitle="Mon profil"
+        title={`Bienvenue, ${userFirstname} !`}
+        subtitle="Votre art, votre planning, votre succès !"
+        avatarUri={providerAvatar} // ✅ Avatar fixe pour Provider
         showMenu={true}
         showSearch={false}
-        avatarUri={require('@/assets/images/avatarclient.png')}
-        menuItems={customerMenuItems}
+        menuItems={providerMenuItems}
         onMenuItemPress={handleMenuItemPress}
       />
 
-      {/* Corps du profil */}
       <View style={styles.profileContainer}>
-        <View style={styles.buttonsContainer}>
+        <View style={styles.rowButtonsContainer}>
           <View style={styles.buttonBlock}>
-            <TouchableOpacity onPress={() => router.push('/customer/booking-list')}>
+            <TouchableOpacity onPress={() => router.push('/provider/planning')}>
               <Image
                 source={require('@/assets/images/bookingcustomer.png')}
                 style={styles.buttonIcon}
               />
             </TouchableOpacity>
-            <AppText style={styles.buttonLabel}>Réservations</AppText>
+            <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Mon planning</AppText>
           </View>
 
           <View style={styles.buttonBlock}>
-            <TouchableOpacity onPress={() => router.push('/settings')}>
+            <TouchableOpacity onPress={() => router.push('/provider/services')}>
               <Image
-                source={require('@/assets/images/setting.png')}
+                source={require('@/assets/images/brush.png')}
                 style={styles.buttonIcon}
               />
             </TouchableOpacity>
-            <AppText style={styles.buttonLabel}>Paramètres</AppText>
+            <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Mes prestations</AppText>
           </View>
+        </View>
+
+        <View style={[styles.buttonBlock, styles.centeredButton]}>
+          <TouchableOpacity onPress={() => router.push('/settings')}>
+            <Image
+              source={require('@/assets/images/setting.png')}
+              style={styles.buttonIcon}
+            />
+          </TouchableOpacity>
+          <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Paramètres</AppText>
         </View>
       </View>
     </SafeAreaView>
@@ -96,9 +108,8 @@ const styles = StyleSheet.create({
   profileContainer: {
     alignItems: 'center',
     marginTop: 20,
-    fontFamily: 'Inter_400Regular',
   },
-  buttonsContainer: {
+  rowButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     width: '95%',
@@ -115,17 +126,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 4,
     elevation: 5,
-    fontFamily: 'Inter_400Regular',
   },
-  buttonIcon: {
-    width: 150,
-    height: 150,
-    borderRadius: 15,
+  centeredButton: {
+    marginTop: 20,
+    alignSelf: 'center',
   },
-  buttonLabel: {
-    marginTop: 10,
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#000',
-  },
+  buttonIcon: { width: 150, height: 150, borderRadius: 15 },
+  buttonLabel: { marginTop: 10, fontSize: 17, fontWeight: 'bold', color: '#000' },
 });

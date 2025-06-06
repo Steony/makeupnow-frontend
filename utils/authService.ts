@@ -2,6 +2,7 @@
 
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { jwtDecode } from 'jwt-decode';
 import { Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { api } from '../config/api';
@@ -61,7 +62,25 @@ export const handleLogin = async (email: string, password: string) => {
 
     await setItem('jwtToken', token);
 
-    router.push('/');
+    // ✅ Décoder le rôle directement du JWT
+    const decoded: { role: string } = jwtDecode(token);
+    console.log("✅ Rôle extrait du JWT :", decoded.role);
+
+    // ✅ Rediriger selon le rôle
+    if (decoded.role === 'ROLE_CLIENT') {
+      router.replace('/customer/home');
+    } else if (decoded.role === 'ROLE_PROVIDER') {
+      router.replace('/provider/home');
+    } else if (decoded.role === 'ROLE_ADMIN') {
+      router.replace('/admin/home');
+    } else {
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: 'Rôle non reconnu.',
+      });
+      return;
+    }
 
     Toast.show({
       type: 'success',

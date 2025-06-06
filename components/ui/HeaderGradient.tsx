@@ -1,4 +1,6 @@
 import AppText from '@/components/ui/AppText';
+import { useAuth } from '@/utils/AuthContext';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
@@ -73,7 +75,6 @@ const FilterModalCategory = ({
 
   const validateSelection = () => {
     onSelect(selectedCategories);
-    console.log('Catégories sélectionnées (snippet) :', selectedCategories);
     onClose();
   };
 
@@ -122,8 +123,8 @@ interface HeaderGradientProps {
   onChangeLocation?: (text: string) => void;
   onCategorySelect?: (categories: string[]) => void;
   showCategoryButton?: boolean;
-  menuItems?: string[]; // ✅ Ajouté
-  onMenuItemPress?: (item: string) => void; // ✅ Ajouté
+  menuItems?: string[];
+  onMenuItemPress?: (item: string) => void;
 }
 
 export default function HeaderGradient({
@@ -139,10 +140,18 @@ export default function HeaderGradient({
   onChangeLocation,
   onCategorySelect,
   showCategoryButton = true,
-  menuItems = [], // ✅ Ajouté
-  onMenuItemPress, // ✅ Ajouté
+  menuItems = [],
+  onMenuItemPress,
 }: HeaderGradientProps) {
-  const defaultAvatar = require('../../assets/images/avatarclient.png');
+  const { currentUser } = useAuth();
+  const defaultAvatar = getDefaultAvatar(
+  (currentUser?.role?.toUpperCase() as 'CLIENT' | 'PROVIDER' | 'ADMIN') || 'CLIENT'
+);
+
+
+  const dynamicAvatar =
+    avatarUri || defaultAvatar;
+
   const [menuVisible, setMenuVisible] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
 
@@ -150,7 +159,6 @@ export default function HeaderGradient({
   const toggleFilter = () => setFilterVisible(!filterVisible);
 
   const handleCategorySelect = (categories: string[]) => {
-    console.log('Catégories sélectionnées (header) :', categories);
     if (onCategorySelect) {
       onCategorySelect(categories);
     }
@@ -171,7 +179,7 @@ export default function HeaderGradient({
             </TouchableOpacity>
           )}
           <Image
-            source={typeof avatarUri === 'string' && avatarUri.startsWith('http') ? { uri: avatarUri } : avatarUri || defaultAvatar}
+            source={typeof dynamicAvatar === 'string' && dynamicAvatar.startsWith('http') ? { uri: dynamicAvatar } : dynamicAvatar}
             style={styles.avatar}
             resizeMode="cover"
           />
@@ -214,7 +222,6 @@ export default function HeaderGradient({
         )}
       </LinearGradient>
 
-      {/* 👇 Le menu reçoit ses items et callbacks via props */}
       <MenuBurger
         visible={menuVisible}
         onClose={() => setMenuVisible(false)}
@@ -234,7 +241,6 @@ export default function HeaderGradient({
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  // inchangé
   gradient: { width, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, paddingTop: 70, paddingHorizontal: 35 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   menuButton: { padding: 8 },

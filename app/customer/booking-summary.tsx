@@ -1,26 +1,41 @@
-// 📁 customer/BookingSummaryScreen.tsx
+// src/screens/customer/BookingSummaryScreen.tsx
 
-import AppText from '@/components/ui/AppText'; // ✅ Utiliser AppText
+import AppText from '@/components/ui/AppText';
 import BookingSummaryCard from '@/components/ui/BookingSummaryCard';
 import Footer from '@/components/ui/Footer';
 import HeaderWithBackButton from '@/components/ui/HeaderWithBackButton';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { api } from '@/config/api';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 export default function BookingSummaryScreen() {
   const router = useRouter();
+  const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
+  const [bookingDetails, setBookingDetails] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const bookingDetails = {
-    date: 'Mardi 12 octobre à 12h00',
-    provider: 'Selena Vega',
-    service: 'Maquillage mariée',
-    address: '60 avenue du bois, Gallieni',
-    duration: '2h',
-    clientName: 'Ralphy Wiggum',
-    price: 120,
-  };
+  useEffect(() => {
+    const fetchBookingDetails = async () => {
+      try {
+        const response = await api.get(`/bookings/${bookingId}`);
+        setBookingDetails(response.data);
+      } catch (error) {
+        console.error('Erreur lors de la récupération du booking:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: 'Impossible de charger les détails de la réservation.',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (bookingId) {
+      fetchBookingDetails();
+    }
+  }, [bookingId]);
 
   const handleConfirmReservation = () => {
     Toast.show({
@@ -35,33 +50,46 @@ export default function BookingSummaryScreen() {
     }, 1500);
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    };
+    return new Intl.DateTimeFormat('fr-FR', options).format(date);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <HeaderWithBackButton
-        title="Prendre RDV"
-        avatarUri={require('../../assets/images/avatarclient.png')}
-      />
+      <HeaderWithBackButton title="Prendre RDV" avatarUri={require('../../assets/images/avatarclient.png')} />
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <AppText style={styles.title}>Récapitulatif de la réservation</AppText>
+      {loading ? (
+        <ActivityIndicator size="large" color="#7946CD" style={{ marginTop: 50 }} />
+      ) : bookingDetails ? (
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <AppText style={styles.title}>Récapitulatif de la réservation</AppText>
 
-        <BookingSummaryCard
-          date={bookingDetails.date}
-          provider={bookingDetails.provider}
-          service={bookingDetails.service}
-          address={bookingDetails.address}
-          duration={bookingDetails.duration}
-          clientName={bookingDetails.clientName}
-          price={bookingDetails.price}
-        />
+          <BookingSummaryCard
+            date={formatDate(bookingDetails.dateBooking)}
+            provider={bookingDetails.providerName}
+            service={bookingDetails.serviceTitle}
+            address={bookingDetails.providerAddress}
+            duration={bookingDetails.serviceDuration}
+            clientName={bookingDetails.customerName}
+            price={bookingDetails.totalPrice}
+          />
 
-        <TouchableOpacity
-          style={styles.validateButton}
-          onPress={handleConfirmReservation}
-        >
-          <AppText style={styles.validateButtonText}>Confirmer la réservation</AppText>
-        </TouchableOpacity>
-      </ScrollView>
+          <TouchableOpacity style={styles.validateButton} onPress={handleConfirmReservation}>
+            <AppText style={styles.validateButtonText}>Confirmer la réservation</AppText>
+          </TouchableOpacity>
+        </ScrollView>
+      ) : (
+        <AppText style={{ marginTop: 50, textAlign: 'center' }}>Aucune donnée trouvée.</AppText>
+      )}
 
       <Footer />
     </SafeAreaView>

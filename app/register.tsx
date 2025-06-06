@@ -1,5 +1,5 @@
 // src/screens/RegisterScreen.tsx
-import AppText from '@/components/ui/AppText'; // ✅ Ajout
+import AppText from '@/components/ui/AppText';
 import CheckBox from 'expo-checkbox';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -28,7 +28,6 @@ export default function RegisterScreen() {
   const [adresse, setAdresse] = useState('');
   const [mobile, setMobile] = useState('');
   const [isChecked, setIsChecked] = useState(false);
-  const [isCertified, setIsCertified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleUserType = (type: 'Client' | 'Pro') => setUserType(type);
@@ -100,6 +99,11 @@ export default function RegisterScreen() {
     }
   };
 
+  // ✅ Définir dynamiquement le placeholder de l’adresse
+  const addressPlaceholder = userType === 'Pro'
+    ? 'Adresse (lieu d\'exercice professionnel)'
+    : 'Adresse de domicile';
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <HeaderWithBackButton title="Créer un compte" />
@@ -131,17 +135,8 @@ export default function RegisterScreen() {
         <CustomInput icon={require('../assets/images/user.png')} placeholder="Nom" value={nom} onChangeText={setNom} />
         <CustomInput icon={require('../assets/images/mail.png')} placeholder="example@email.com" value={email} onChangeText={setEmail} keyboardType="email-address" />
         <CustomInput icon={require('../assets/images/lock.png')} placeholder="•••" value={password} onChangeText={setPassword} secureTextEntry showEyeIcon />
-        <CustomInput icon={require('../assets/images/location.png')} placeholder="Adresse" value={adresse} onChangeText={setAdresse} />
+        <CustomInput icon={require('../assets/images/location.png')} placeholder={addressPlaceholder} value={adresse} onChangeText={setAdresse} />
         <CustomInput icon={require('../assets/images/mobile.png')} placeholder="Mobile" value={mobile} onChangeText={setMobile} keyboardType="phone-pad" />
-
-        {userType === 'Pro' && (
-          <View style={styles.checkboxContainer}>
-            <CheckBox value={isCertified} onValueChange={setIsCertified} disabled={isLoading} />
-            <AppText style={styles.checkboxText}>
-              J’atteste avoir une certification professionnelle de maquilleur(se) (facultatif)
-            </AppText>
-          </View>
-        )}
 
         <View style={styles.checkboxContainer}>
           <CheckBox value={isChecked} onValueChange={setIsChecked} disabled={isLoading} />
