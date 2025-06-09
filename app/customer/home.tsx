@@ -1,7 +1,7 @@
 import Footer from '@/components/ui/Footer';
 import ProviderCard from '@/components/ui/ProviderCard';
 import { api } from '@/config/api';
-import { useAuth } from '@/utils/AuthContext'; // <-- Import du hook useAuth
+import { useAuth } from '@/utils/AuthContext';
 import { handleLogout } from '@/utils/authService';
 import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 import { useRouter } from 'expo-router';
@@ -10,10 +10,19 @@ import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, View } f
 import Toast from 'react-native-toast-message';
 import HeaderGradient from '../../components/ui/HeaderGradient';
 
-export default function CustomerHomeScreen() {
-  const { currentUser } = useAuth();  // <-- Utilisation du contexte Auth
+interface Provider {
+  id: number;
+  firstname: string;
+  lastname: string;
+  address: string;
+  averageRating?: number;
+  categoriesString?: string; // le champ concaténé du backend
+}
 
-  const [providers, setProviders] = useState<any[]>([]);
+export default function CustomerHomeScreen() {
+  const { currentUser } = useAuth();
+
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,71 +31,63 @@ export default function CustomerHomeScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProviders = async () => {
       try {
-        const providersResponse = await api.get('/providers');
-        let providersArray = providersResponse.data;
+        const res = await api.get('/providers');
 
-        if (typeof providersArray === 'string') {
-          try {
-            const match = providersArray.match(/\[.*?\]/);
-            if (match) {
-              providersArray = JSON.parse(match[0]);
-            } else {
-              providersArray = [];
-            }
-          } catch (e) {
-            console.error('Erreur parsing JSON providers:', e);
-            providersArray = [];
-          }
+        if (Array.isArray(res.data)) {
+          setProviders(res.data);
+          console.log('Providers reçus:', res.data);
+        } else {
+          setProviders([]);
+          console.warn('Réponse inattendue des providers:', res.data);
         }
-
-        if (!Array.isArray(providersArray)) {
-          providersArray = [];
-        }
-
-        // --- Extraction de la catégorie depuis les services ---
-        providersArray = providersArray.map((provider: any) => {
-          const categories = provider.services?.map((service: any) => service.category) || [];
-          const uniqueCategories = [...new Set(categories)];
-          return {
-            ...provider,
-            category: uniqueCategories.join(', ') || 'Makeup Artist',
-          };
-        });
-
-        setProviders(providersArray);
-      } catch (error: any) {
-        console.error('Erreur lors de la récupération des données :', error);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des providers:', error);
         Toast.show({
           type: 'error',
           text1: 'Erreur',
-          text2: "Impossible de charger les données.",
+          text2: 'Impossible de charger les prestataires.',
         });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
+    fetchProviders();
   }, []);
 
-  const safeLower = (value: any) => (typeof value === 'string' ? value.toLowerCase() : '');
+  // Sécurise la conversion en minuscules
+ const filteredProviders = providers.filter((provider) => {
+  const searchLower = (searchQuery || '').toLowerCase();
+  const locationLower = (locationQuery || '').toLowerCase();
+  const fullName = `${(provider.firstname || '').toLowerCase()} ${(provider.lastname || '').toLowerCase()}`;
+  const addressLower = (provider.address || '').toLowerCase();
+  const categoriesLower = (provider.categoriesString || '').toLowerCase();
 
-  const filteredProviders = providers.filter((provider) => {
-    const fullName = `${safeLower(provider.firstname)} ${safeLower(provider.lastname)}`;
-    const keywordMatch =
-      fullName.includes(searchQuery.toLowerCase()) ||
-      safeLower(provider.address).includes(searchQuery.toLowerCase());
+  if (!searchLower && !locationLower) return true;
 
-    const locationMatch = safeLower(provider.address).includes(locationQuery.toLowerCase());
-    return keywordMatch && locationMatch;
-  });
+  const matchesKeyword =
+    searchLower &&
+    (fullName.includes(searchLower) ||
+      addressLower.includes(searchLower) ||
+      categoriesLower.includes(searchLower));
 
-  const handleGoToProfile = (providerId: number | string) => {
-    router.push(`/profile-provider`);
+  const matchesLocation =
+    locationLower && addressLower.includes(locationLower);
+
+  if (searchLower && locationLower) return matchesKeyword && matchesLocation;
+  return matchesKeyword || matchesLocation;
+});
+
+
+
+  // Navigation vers profil provider avec query param
+  const handleGoToProfile = (providerId: number) => {
+    router.push(`/profile-provider?providerId=${providerId}`);
   };
 
+  // Menu client
   const customerMenuItems = [
     'Accueil',
     'Mes réservations',
@@ -113,7 +114,7 @@ export default function CustomerHomeScreen() {
         handleLogout();
         break;
       default:
-        console.log('Aucune action définie');
+        console.log('Aucune action définie pour:', item);
     }
   };
 
@@ -128,7 +129,7 @@ export default function CustomerHomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <HeaderGradient
-        title={`Bienvenue ${currentUser?.name ?? 'Utilisateur'},`} 
+        title={`Bienvenue ${currentUser?.name ?? 'Utilisateur'},`}
         subtitle="Trouvez votre Make up Artist !"
         avatarUri={getDefaultAvatar('CLIENT')}
         showMenu={true}
@@ -153,7 +154,9 @@ export default function CustomerHomeScreen() {
               key={provider.id}
               name={`${provider.firstname} ${provider.lastname}`}
               imageUri={getDefaultAvatar('PROVIDER')}
-              category={provider.category}
+              category={
+                provider.categoriesString?.length ? provider.categoriesString : 'Makeup Artist'
+              }
               address={provider.address}
               rating={provider.averageRating}
               onPressProfile={() => handleGoToProfile(provider.id)}

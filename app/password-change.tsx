@@ -3,11 +3,21 @@ import CustomInput from '@/components/ui/CustomInput';
 import Footer from '@/components/ui/Footer';
 import HeaderWithBackButton from '@/components/ui/HeaderWithBackButton';
 import { api } from '@/config/api';
-import React, { useState } from 'react';
+import { useAuth } from '@/utils/AuthContext';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import Toast from 'react-native-toast-message'; // ✅ Ajout des toasts
+import Toast from 'react-native-toast-message';
 
 export default function PasswordChangeScreen() {
+  const { currentUser } = useAuth();
+
+  // Dynamique : avatar selon le rôle
+  const avatarUri = useMemo(
+  () => getDefaultAvatar((currentUser?.role as 'CLIENT' | 'PROVIDER' | 'ADMIN') || 'CLIENT'),
+  [currentUser]
+);
+
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -46,7 +56,10 @@ export default function PasswordChangeScreen() {
       Toast.show({
         type: 'error',
         text1: 'Erreur',
-        text2: error.response?.data || "Impossible de mettre à jour le mot de passe.",
+        text2:
+          error.response?.data?.message ||
+          error.response?.data ||
+          "Impossible de mettre à jour le mot de passe.",
       });
     }
   };
@@ -55,7 +68,7 @@ export default function PasswordChangeScreen() {
     <View style={styles.container}>
       <HeaderWithBackButton
         title="Modifier le mot de passe"
-        avatarUri={require('@/assets/images/avatarclient.png')}
+        avatarUri={avatarUri}
       />
 
       <View style={styles.form}>

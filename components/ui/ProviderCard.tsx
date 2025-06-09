@@ -1,16 +1,16 @@
-import { getDefaultAvatar } from '@/utils/getDefaultAvatar'; // ✅ Import de la fonction dynamique
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 import React from 'react';
 import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import AppText from './AppText';
 
 interface ProviderCardProps {
   name: string;
-  imageUri?: string | number; // facultatif
+  imageUri?: string | number;
   category: string;
   address: string;
-  rating?: number; // facultatif
+  rating?: number;
   onPressProfile: () => void;
-  role?: 'ADMIN' | 'CLIENT' | 'PROVIDER'; // ✅ Typage plus strict
+  role?: 'ADMIN' | 'CLIENT' | 'PROVIDER';
 }
 
 export default function ProviderCard({
@@ -20,13 +20,12 @@ export default function ProviderCard({
   address,
   rating,
   onPressProfile,
-  role = 'PROVIDER', // ✅ Valeur par défaut si non fourni
+  role = 'PROVIDER',
 }: ProviderCardProps) {
-  const displayedRating = rating !== undefined && rating !== null ? rating.toFixed(1) : 'N/A';
+  const displayedRating = rating != null ? rating.toFixed(1) : 'N/A';
 
-  // ✅ Avatar dynamique (imageUri > fallback local basé sur le rôle)
   const avatarSource =
-    imageUri && typeof imageUri === 'string'
+    typeof imageUri === 'string' && imageUri.length > 0
       ? { uri: imageUri }
       : imageUri
       ? imageUri
@@ -37,10 +36,7 @@ export default function ProviderCard({
       <View style={styles.avatarContainer}>
         <Image source={avatarSource} style={styles.avatar} />
         <View style={styles.ratingContainer}>
-          <Image
-            source={require('@/assets/images/star.png')}
-            style={styles.starIcon}
-          />
+          <Image source={require('@/assets/images/star.png')} style={styles.starIcon} />
           <AppText style={styles.ratingText}>{displayedRating}/5</AppText>
         </View>
       </View>
@@ -50,10 +46,7 @@ export default function ProviderCard({
         <AppText style={styles.category}>{category}</AppText>
 
         <View style={styles.addressRow}>
-          <Image
-            source={require('@/assets/images/locationapi.png')}
-            style={styles.locationIcon}
-          />
+          <Image source={require('@/assets/images/locationapi.png')} style={styles.locationIcon} />
           <AppText style={styles.address}>{address}</AppText>
         </View>
 

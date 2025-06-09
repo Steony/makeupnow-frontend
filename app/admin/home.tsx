@@ -1,26 +1,133 @@
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import AppText from '@/components/ui/AppText';
+import HeaderGradient from '@/components/ui/HeaderGradient';
+import { useAuth } from '@/utils/AuthContext';
+import { handleLogout } from '@/utils/authService';
+import { useRouter } from 'expo-router';
+import { Image, SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-const AdminHomeScreen = () => {
+export default function HomeAdminScreen() {
+  
+  const { currentUser } = useAuth();
+  const router = useRouter();
+
+  // Avatar statique (à remplacer si besoin)
+  const adminAvatar = require('@/assets/images/avataradmin.png'); // Mets une image admin ici
+
+ 
+
+  // Menu latéral admin
+  const adminMenuItems = [
+    'Mon dashboard',
+    'Gérer les utilisateurs',
+    'Logs utilisateur',
+    'Paramètres',
+    'Déconnexion',
+  ];
+
+  const handleMenuItemPress = (item: string) => {
+    switch (item) {
+      case 'Mon dashboard':
+        router.push('/admin/home');
+        break;
+      case 'Gérer les utilisateurs':
+        router.push('/');
+        break;
+      case 'Logs utilisateur':
+        router.push('/admin/user-logs');
+        break;
+      case 'Paramètres':
+        router.push('/settings');
+        break;
+      case 'Déconnexion':
+        handleLogout();
+        break;
+      default:
+        console.log('Aucune action définie');
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Bienvenue sur la page accueil Admin</Text>
-    </View>
-  );
-};
+    <SafeAreaView style={styles.container}>
+      <HeaderGradient
+            title={`Bienvenue ${currentUser?.name ?? 'Utilisateur'},`}
+        subtitle="Administrez vos utilisateurs et réservations"
+        avatarUri={adminAvatar}
+        showMenu={true}
+        showSearch={false}
+        menuItems={adminMenuItems}
+        onMenuItemPress={handleMenuItemPress}
+      />
 
-export default AdminHomeScreen;
+      <View style={styles.profileContainer}>
+        <View style={styles.rowButtonsContainer}>
+          {/* Bloc 1 : Gérer les utilisateurs */}
+          <View style={styles.buttonBlock}>
+            <TouchableOpacity onPress={() => router.push('/')}>
+              <Image
+                source={require('@/assets/images/manage-users.png')}
+                style={styles.buttonIcon}
+              />
+            </TouchableOpacity>
+            <AppText style={styles.buttonLabel}>Gérer les utilisateurs</AppText>
+          </View>
+
+          {/* Bloc 2 : Paramètres */}
+          <View style={styles.buttonBlock}>
+            <TouchableOpacity onPress={() => router.push('/settings')}>
+              <Image
+                source={require('@/assets/images/setting.png')}
+                style={styles.buttonIcon}
+              />
+            </TouchableOpacity>
+            <AppText style={styles.buttonLabel}>Paramètres</AppText>
+          </View>
+        </View>
+
+        {/* Bloc 3 : Logs utilisateur */}
+        <View style={[styles.buttonBlock, styles.centeredButton]}>
+          <TouchableOpacity onPress={() => router.push('/admin/user-logs')}>
+            <Image
+              source={require('@/assets/images/logs.png')}
+              style={styles.buttonIcon}
+            />
+          </TouchableOpacity>
+          <AppText style={styles.buttonLabel}>Logs utilisateurs</AppText>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
+  container: { flex: 1, backgroundColor: '#f5edf9' },
+  profileContainer: {
+    alignItems: 'center',
+    marginTop: 20,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
+  rowButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    width: '95%',
+    marginTop: 20,
   },
+  buttonBlock: {
+    alignItems: 'center',
+    marginHorizontal: 10,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.17,
+    shadowRadius: 5,
+    elevation: 5,
+    minWidth: 145,
+    minHeight: 145,
+  },
+  centeredButton: {
+    marginTop: 24,
+    alignSelf: 'center',
+  },
+  buttonIcon: { width: 64, height: 64, resizeMode: 'contain', marginBottom: 5 },
+  buttonLabel: { marginTop: 10, fontSize: 17, fontWeight: 'bold', color: '#31204D' },
 });
