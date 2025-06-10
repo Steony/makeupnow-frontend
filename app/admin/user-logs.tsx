@@ -1,10 +1,11 @@
 import AppText from '@/components/ui/AppText';
+import Footer from '@/components/ui/Footer';
 import HeaderGradient from '@/components/ui/HeaderGradient';
 import { useAuth } from '@/utils/AuthContext';
 import { handleLogout } from '@/utils/authService';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Modal, ScrollView, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Image, Modal, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View, } from 'react-native';
 
 const fakeUser = {
   avatar: require('@/assets/images/avatarprovider.png'),
@@ -58,7 +59,7 @@ export default function UserLogsScreen() {
         router.push('/admin/home');
         break;
       case 'Gérer les utilisateurs':
-        router.push('/');
+        router.push('/admin/user-management');
         break;
       case 'Logs utilisateur':
         router.push('/admin/user-logs');
@@ -82,6 +83,7 @@ export default function UserLogsScreen() {
   });
 
   return (
+    <SafeAreaView style={styles.container}>
     <View style={styles.container}>
       <HeaderGradient
         title={`Bienvenue ${currentUser?.name ?? 'Utilisateur'},`}
@@ -154,8 +156,9 @@ export default function UserLogsScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
+<ScrollView style={styles.logsList}>
       {/* Utilisateur sélectionné */}
+      
       <View style={styles.userCard}>
         <Image source={fakeUser.avatar} style={styles.userAvatar} />
         <View style={styles.userInfo}>
@@ -204,7 +207,7 @@ export default function UserLogsScreen() {
       </Modal>
 
       {/* Liste des logs triée */}
-      <ScrollView style={styles.logsList}>
+      
         {sortedLogs.map((log, idx) => (
           <View key={idx} style={styles.logRow}>
             <AppText style={styles.logDate}>{log.date}</AppText>
@@ -213,12 +216,14 @@ export default function UserLogsScreen() {
           </View>
         ))}
       </ScrollView>
+      <Footer />
     </View>
+     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5edf9' },
+  container: { flex: 1, backgroundColor: '#ffff' },
   filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',

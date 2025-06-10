@@ -16,34 +16,51 @@ interface Provider {
   lastname: string;
   address: string;
   averageRating?: number;
-  categoriesString?: string; // le champ concaténé du backend
+  categoriesString?: string | null;
 }
 
 export default function CustomerHomeScreen() {
   const { currentUser } = useAuth();
 
-  const [providers, setProviders] = useState<Provider[]>([]);
+  // -- State --
+  const [allProviders, setAllProviders] = useState<Provider[]>([]);
+  const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [locationQuery, setLocationQuery] = useState('');
+  // Filtres front
+  const [search, setSearch] = useState('');
+  const [location, setLocation] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
 
   const router = useRouter();
 
+  // 1️⃣ Récupère tous les providers une seule fois
   useEffect(() => {
     const fetchProviders = async () => {
       try {
         const res = await api.get('/providers');
+        let data = res.data;
 
-        if (Array.isArray(res.data)) {
-          setProviders(res.data);
-          console.log('Providers reçus:', res.data);
-        } else {
-          setProviders([]);
-          console.warn('Réponse inattendue des providers:', res.data);
+        if (typeof data === 'string') {
+          const matches = data.match(/\[.*?\]/g);
+          if (matches && matches.length) {
+            try {
+              data = JSON.parse(matches[0]);
+            } catch  {
+              data = [];
+            }
+          } else {
+            try {
+              data = JSON.parse(data);
+            } catch  {
+              data = [];
+            }
+          }
         }
-      } catch (error) {
-        console.error('Erreur lors de la récupération des providers:', error);
+
+        setAllProviders(Array.isArray(data) ? data : []);
+        setFilteredProviders(Array.isArray(data) ? data : []);
+      } catch  {
         Toast.show({
           type: 'error',
           text1: 'Erreur',
@@ -57,37 +74,49 @@ export default function CustomerHomeScreen() {
     fetchProviders();
   }, []);
 
-  // Sécurise la conversion en minuscules
- const filteredProviders = providers.filter((provider) => {
-  const searchLower = (searchQuery || '').toLowerCase();
-  const locationLower = (locationQuery || '').toLowerCase();
-  const fullName = `${(provider.firstname || '').toLowerCase()} ${(provider.lastname || '').toLowerCase()}`;
-  const addressLower = (provider.address || '').toLowerCase();
-  const categoriesLower = (provider.categoriesString || '').toLowerCase();
+  // 2️⃣ Filtrage local dès que search/categories/location changent
+  useEffect(() => {
+    let result = allProviders;
 
-  if (!searchLower && !locationLower) return true;
+    // 🔍 Recherche mot-clé sur nom, prénom, adresse, catégories
+    if (search) {
+      const searchLC = search.toLowerCase();
+      result = result.filter(provider => {
+        const fullText = (
+          (provider.firstname || '') + ' ' +
+          (provider.lastname || '') + ' ' +
+          (provider.address || '') + ' ' +
+          (provider.categoriesString || '')
+        ).toLowerCase();
+        return fullText.includes(searchLC);
+      });
+    }
 
-  const matchesKeyword =
-    searchLower &&
-    (fullName.includes(searchLower) ||
-      addressLower.includes(searchLower) ||
-      categoriesLower.includes(searchLower));
+    // 🔍 Filtre LIEU uniquement (précis ou partiel)
+    if (location) {
+      const locLC = location.toLowerCase();
+      result = result.filter(provider =>
+        (provider.address || '').toLowerCase().includes(locLC)
+      );
+    }
 
-  const matchesLocation =
-    locationLower && addressLower.includes(locationLower);
+    // 🔍 Filtre par CATEGORIES (OR multiple)
+    if (categories.length > 0) {
+      result = result.filter(provider =>
+        categories.some(cat =>
+          (provider.categoriesString ?? '').toLowerCase().includes(cat.toLowerCase())
+        )
+      );
+    }
 
-  if (searchLower && locationLower) return matchesKeyword && matchesLocation;
-  return matchesKeyword || matchesLocation;
-});
+    setFilteredProviders(result);
+  }, [search, categories, location, allProviders]);
 
-
-
-  // Navigation vers profil provider avec query param
+  // Navigation vers profil
   const handleGoToProfile = (providerId: number) => {
     router.push(`/profile-provider?providerId=${providerId}`);
   };
 
-  // Menu client
   const customerMenuItems = [
     'Accueil',
     'Mes réservations',
@@ -114,7 +143,6 @@ export default function CustomerHomeScreen() {
         handleLogout();
         break;
       default:
-        console.log('Aucune action définie pour:', item);
     }
   };
 
@@ -125,6 +153,11 @@ export default function CustomerHomeScreen() {
       </SafeAreaView>
     );
   }
+// 🐛 DEBUG LOG
+console.log("filteredProviders", filteredProviders);
+console.log("categories", categories);
+console.log("location", location);
+console.log("search", search);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -135,35 +168,54 @@ export default function CustomerHomeScreen() {
         showMenu={true}
         showSearch={true}
         showLocationSearch={true}
-        searchQuery={searchQuery}
-        onChangeSearch={setSearchQuery}
-        locationQuery={locationQuery}
-        onChangeLocation={setLocationQuery}
         menuItems={customerMenuItems}
         onMenuItemPress={handleMenuItemPress}
+        searchQuery={search}
+        onChangeSearch={setSearch}
+        locationQuery={location}
+        onChangeLocation={setLocation}
+        onCategorySelect={setCategories}
+        // showCategoryButton={true} // true par défaut
       />
 
-      <Text style={{ textAlign: 'center', color: '#9B59B6', marginTop: 8 }}>
-        Providers trouvés : {filteredProviders.length}
-      </Text>
+      <View style={{ backgroundColor: 'white', padding: 15 }}>
+        <Text>Providers trouvés : {filteredProviders.length}</Text>
+        {categories.length > 0 && (
+          <Text style={{ color: '#6229c6', marginTop: 8 }}>
+            Filtre(s) actif(s) : {categories.join(', ')}
+          </Text>
+        )}
+        {location && (
+          <Text style={{ color: '#6d38b1', marginTop: 2 }}>
+            Localisation : {location}
+          </Text>
+        )}
+        {search && (
+          <Text style={{ color: '#e07c39', marginTop: 2 }}>
+            Recherche : {search}
+          </Text>
+        )}
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.providersList}>
-          {filteredProviders.map((provider) => (
+      <ScrollView>
+        {filteredProviders.length === 0 ? (
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+            <Text style={{ color: '#A478DD', fontSize: 18 }}>
+              Aucun prestataire trouvé...
+            </Text>
+          </View>
+        ) : (
+          filteredProviders.map((provider) => (
             <ProviderCard
               key={provider.id}
               name={`${provider.firstname} ${provider.lastname}`}
-              imageUri={getDefaultAvatar('PROVIDER')}
-              category={
-                provider.categoriesString?.length ? provider.categoriesString : 'Makeup Artist'
-              }
               address={provider.address}
+              category={provider.categoriesString || 'Makeup Artist'}
               rating={provider.averageRating}
               onPressProfile={() => handleGoToProfile(provider.id)}
-              role="PROVIDER"
             />
-          ))}
-        </View>
+          ))
+        )}
       </ScrollView>
 
       <Footer />
@@ -175,9 +227,5 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F3EDF7',
-  },
-  scrollContainer: {},
-  providersList: {
-    marginTop: 20,
   },
 });

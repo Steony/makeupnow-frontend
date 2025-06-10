@@ -1,4 +1,5 @@
 import AppText from '@/components/ui/AppText';
+import Footer from '@/components/ui/Footer';
 import HeaderGradient from '@/components/ui/HeaderGradient';
 import { useAuth } from '@/utils/AuthContext';
 import { handleLogout } from '@/utils/authService';
@@ -30,7 +31,7 @@ export default function HomeAdminScreen() {
         router.push('/admin/home');
         break;
       case 'Gérer les utilisateurs':
-        router.push('/');
+        router.push('/admin/user-management');
         break;
       case 'Logs utilisateur':
         router.push('/admin/user-logs');
@@ -57,12 +58,13 @@ export default function HomeAdminScreen() {
         menuItems={adminMenuItems}
         onMenuItemPress={handleMenuItemPress}
       />
-
+ <View style={{ flex: 1, justifyContent: 'space-between' }}>
+ 
       <View style={styles.profileContainer}>
         <View style={styles.rowButtonsContainer}>
           {/* Bloc 1 : Gérer les utilisateurs */}
           <View style={styles.buttonBlock}>
-            <TouchableOpacity onPress={() => router.push('/')}>
+            <TouchableOpacity onPress={() => router.push('/admin/user-management')}>
               <Image
                 source={require('@/assets/images/manage-users.png')}
                 style={styles.buttonIcon}
@@ -93,7 +95,10 @@ export default function HomeAdminScreen() {
           </TouchableOpacity>
           <AppText style={styles.buttonLabel}>Logs utilisateurs</AppText>
         </View>
+         
       </View>
+     <Footer />
+     </View>
     </SafeAreaView>
   );
 }
@@ -114,20 +119,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 10,
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 18,
+    borderRadius: 5,
+    padding: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.17,
-    shadowRadius: 5,
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
     elevation: 5,
-    minWidth: 145,
-    minHeight: 145,
   },
   centeredButton: {
-    marginTop: 24,
+    marginTop: 20,
     alignSelf: 'center',
   },
-  buttonIcon: { width: 64, height: 64, resizeMode: 'contain', marginBottom: 5 },
-  buttonLabel: { marginTop: 10, fontSize: 17, fontWeight: 'bold', color: '#31204D' },
+  buttonIcon: { width: 150, height: 150, borderRadius: 15 },
+  buttonLabel: { marginTop: 10, fontSize: 17, fontWeight: 'bold', color: '#000' },
 });

@@ -1,4 +1,5 @@
 import AppText from '@/components/ui/AppText';
+import Footer from '@/components/ui/Footer';
 import HeaderGradient from '@/components/ui/HeaderGradient';
 import { api } from '@/config/api';
 
@@ -65,7 +66,7 @@ export default function HomeProviderScreen() {
         menuItems={providerMenuItems}
         onMenuItemPress={handleMenuItemPress}
       />
-
+ <View style={{ flex: 1, justifyContent: 'space-between' }}>
       <View style={styles.profileContainer}>
         <View style={styles.rowButtonsContainer}>
           <View style={styles.buttonBlock}>
@@ -98,6 +99,9 @@ export default function HomeProviderScreen() {
           </TouchableOpacity>
           <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Paramètres</AppText>
         </View>
+        
+        </View>
+        <Footer />
       </View>
     </SafeAreaView>
   );

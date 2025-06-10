@@ -1,4 +1,5 @@
 import AppText from '@/components/ui/AppText';
+import Footer from '@/components/ui/Footer';
 import HeaderGradient from '@/components/ui/HeaderGradient';
 import { api } from '@/config/api'; // ✅ Ajouté pour faire la requête
 import { handleLogout } from '@/utils/authService';
@@ -62,7 +63,7 @@ export default function ProfileScreen() {
         menuItems={customerMenuItems}
         onMenuItemPress={handleMenuItemPress}
       />
-
+ <View style={{ flex: 1, justifyContent: 'space-between' }}>
       {/* Corps du profil */}
       <View style={styles.profileContainer}>
         <View style={styles.buttonsContainer}>
@@ -86,7 +87,11 @@ export default function ProfileScreen() {
             <AppText style={styles.buttonLabel}>Paramètres</AppText>
           </View>
         </View>
+         
       </View>
+      <Footer />
+      </View>
+      
     </SafeAreaView>
   );
 }

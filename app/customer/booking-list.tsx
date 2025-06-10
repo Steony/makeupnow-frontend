@@ -26,68 +26,116 @@ export default function BookingList() {
   const [statusFilter, setStatusFilter] = useState('Tous');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
- 
-
-  // ✅ Récupérer les réservations
   useEffect(() => {
-    const fetchBookings = async () => {
-      if (!currentUser?.id) return;
+    // Données factices pour test
+    const mockBookings = [
+      {
+        id: 1,
+        serviceTitle: 'Maquillage Mariage',
+        dateBooking: new Date().toISOString(),
+        totalPrice: 120,
+        status: 'CONFIRMED',
+        providerAddress: '12 rue des Fleurs, Paris',
+        providerName: 'Sophie L.',
+        providerEmail: 'sophie@example.com',
+        providerPhone: '0601020304',
+        paymentId: 101,
+        review: {
+          rating: 5,
+          comment: 'Super prestation !',
+          dateComment: new Date().toISOString(),
+        },
+      },
+      {
+        id: 2,
+        serviceTitle: 'Maquillage Shooting',
+        dateBooking: new Date().toISOString(),
+        totalPrice: 90,
+        status: 'CANCELLED',
+        providerAddress: '45 avenue du Parc, Lyon',
+        providerName: 'Julien M.',
+        providerEmail: 'julien@example.com',
+        providerPhone: '0605060708',
+        paymentId: 102,
+        review: null,
+      },
+    ];
+    setBookings(mockBookings);
 
-      try {
-        const response = await api.get(`/bookings/customer/${currentUser.id}`);
-        console.log('Réservations récupérées :', response.data);
-        setBookings(response.data);
-      } catch (error) {
-        console.error('Erreur lors de la récupération des réservations :', error);
+    /*
+    // Décommenter pour récupération réelle depuis API
+    if (!currentUser?.id) return;
+    api.get(`/bookings/customer/${currentUser.id}`)
+      .then(response => setBookings(Array.isArray(response.data) ? response.data : []))
+      .catch(error => {
+        console.error('Erreur récupération réservations :', error);
         ToastAndroid.show('Erreur lors du chargement des réservations', ToastAndroid.SHORT);
-      }
-    };
-
-    fetchBookings();
+      });
+    */
   }, [currentUser]);
 
-  // ✅ Filtres
+  // Traduction statut backend → utilisateur
+  const translateStatus = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED': return 'Confirmée';
+      case 'COMPLETED': return 'Terminée et payée';
+      case 'CANCELLED': return 'Annulée';
+      case 'EN_COURS': return 'En cours';
+      default: return status;
+    }
+  };
+
+  // Format date en dd/MM/yy
+  const formatDate = (isoDate: string) => {
+    const date = new Date(isoDate);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(2);
+    return `${day}/${month}/${year}`;
+  };
+
+  // Format heure hh:mm
+  const formatTime = (isoDate: string) =>
+    new Date(isoDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  // Filtres combinés
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch = booking.serviceTitle?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus =
       statusFilter === 'Tous' ||
-      (statusFilter === 'En cours' && booking.status === 'EN_COURS') ||
       (statusFilter === 'Confirmée' && booking.status === 'CONFIRMED') ||
       (statusFilter === 'Annulé' && booking.status === 'CANCELLED') ||
       (statusFilter === 'Terminé' && booking.status === 'COMPLETED');
 
     const matchesCategory =
       selectedCategories.length === 0 ||
-      selectedCategories.some((cat) =>
+      selectedCategories.some(cat =>
         booking.serviceTitle?.toLowerCase().includes(cat.toLowerCase())
       );
 
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  // ✅ Confirmation du paiement
-  const handleConfirm = (id: number) => {
+  // Confirmer paiement
+  const handleConfirm = (paymentId: number) => {
     if (!currentUser?.id) {
-      console.error('Erreur : utilisateur non connecté');
       ToastAndroid.show('Erreur : utilisateur non connecté', ToastAndroid.SHORT);
       return;
     }
 
-    Alert.alert('Confirmation', 'Êtes-vous sûr de vouloir confirmer le paiement ?', [
+    Alert.alert('Confirmation', 'Confirmer le paiement ?', [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Oui',
         onPress: async () => {
           try {
             const response = await api.post('/payments/confirm/customer', null, {
-              params: { paymentId: id, customerId: currentUser.id },
+              params: { paymentId, customerId: currentUser.id },
             });
-
             if (response.data) {
-              ToastAndroid.show('Paiement confirmé avec succès ✅', ToastAndroid.SHORT);
+              ToastAndroid.show('Paiement confirmé ✅', ToastAndroid.SHORT);
             }
-          } catch (error) {
-            console.error('Erreur lors de la confirmation du paiement :', error);
+          } catch {
             ToastAndroid.show('Erreur de confirmation', ToastAndroid.SHORT);
           }
         },
@@ -95,19 +143,18 @@ export default function BookingList() {
     ]);
   };
 
-  // ✅ Annulation de la réservation
-  const handleCancel = (id: number) => {
-    Alert.alert('Confirmation', 'Êtes-vous sûr de vouloir annuler la réservation ?', [
+  // Annuler réservation
+  const handleCancel = (bookingId: number) => {
+    Alert.alert('Confirmation', 'Annuler la réservation ?', [
       { text: 'Non', style: 'cancel' },
       {
         text: 'Oui',
         onPress: async () => {
           try {
-            await api.delete(`/bookings/${id}`);
+            await api.delete(`/bookings/${bookingId}`);
             ToastAndroid.show('Réservation annulée ✅', ToastAndroid.SHORT);
-            setBookings((prev) => prev.filter((b) => b.id !== id));
-          } catch (error) {
-            console.error('Erreur lors de l’annulation :', error);
+            setBookings(prev => prev.filter(b => b.id !== bookingId));
+          } catch {
             ToastAndroid.show('Erreur d’annulation', ToastAndroid.SHORT);
           }
         },
@@ -115,85 +162,66 @@ export default function BookingList() {
     ]);
   };
 
-  // ✅ Menu items client
-  const customerMenuItems = ['Accueil', 'Mes réservations', 'Mon profil', 'Paramètres', 'Déconnexion'];
-
-  const handleMenuItemPress = (item: string) => {
-    switch (item) {
-      case 'Accueil':
-        router.push('/customer/home');
-        break;
-      case 'Mes réservations':
-        router.push('/customer/booking-list');
-        break;
-      case 'Mon profil':
-        router.push('/customer/profile');
-        break;
-      case 'Paramètres':
-        router.push('/settings');
-        break;
-      case 'Déconnexion':
-        handleLogout();
-        break;
-      default:
-        console.log('Aucune action définie');
-    }
+  // Soumettre avis (à connecter à ton backend)
+  const handleSubmitReview = (rating: number, comment: string) => {
+    console.log('Avis soumis:', rating, comment);
+    ToastAndroid.show('Avis soumis !', ToastAndroid.SHORT);
+    // ici appel API pour enregistrer l'avis
   };
 
-  // ✅ Formatage des dates
-  const formatDate = (isoDate: string) => new Date(isoDate).toLocaleDateString('fr-FR');
-  const formatTime = (isoDate: string) => new Date(isoDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  // Menu client
+  const customerMenuItems = ['Accueil', 'Mes réservations', 'Mon profil', 'Paramètres', 'Déconnexion'];
+  const handleMenuItemPress = (item: string) => {
+    switch (item) {
+      case 'Accueil': router.push('/customer/home'); break;
+      case 'Mes réservations': router.push('/customer/booking-list'); break;
+      case 'Mon profil': router.push('/customer/profile'); break;
+      case 'Paramètres': router.push('/settings'); break;
+      case 'Déconnexion': handleLogout(); break;
+      default: console.log('Action inconnue');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <HeaderGradient
         title="Mes réservations"
-        showMenu={true}
-        showSearch={true}
+        showMenu
+        showSearch
         showLocationSearch={false}
         searchQuery={searchQuery}
         onChangeSearch={setSearchQuery}
-        onCategorySelect={(categories) => setSelectedCategories(categories)}
+        onCategorySelect={setSelectedCategories}
         showCategoryButton={false}
         menuItems={customerMenuItems}
         onMenuItemPress={handleMenuItemPress}
       />
 
-      {/* Filtres de statut */}
       <View style={styles.filterContainer}>
         <AppText style={styles.filterLabel}>Filtre:</AppText>
-        {['Tous', 'Terminé', 'En cours', 'Annulé'].map((status) => (
+        {['Tous', 'Terminé', 'En cours', 'Annulé'].map(status => (
           <TouchableOpacity
             key={status}
-            style={[
-              styles.filterButton,
-              statusFilter === status && styles.activeFilterButton,
-            ]}
+            style={[styles.filterButton, statusFilter === status && styles.activeFilterButton]}
             onPress={() => setStatusFilter(status)}
           >
-            <AppText
-              style={[
-                styles.filterButtonText,
-                statusFilter === status && styles.activeFilterButtonText,
-              ]}
-            >
+            <AppText style={[styles.filterButtonText, statusFilter === status && styles.activeFilterButtonText]}>
               {status}
             </AppText>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Liste des réservations */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.bookingList}>
-          {filteredBookings.map((booking) => (
+          {filteredBookings.map(booking => (
             <BookingCard
               key={booking.id}
               title={booking.serviceTitle}
               date={formatDate(booking.dateBooking)}
               time={formatTime(booking.dateBooking)}
               price={booking.totalPrice}
-              status={booking.status}
+              status={translateStatus(booking.status)}
               address={booking.providerAddress}
               providerName={booking.providerName}
               providerEmail={booking.providerEmail}
@@ -201,8 +229,10 @@ export default function BookingList() {
               rating={booking.review?.rating}
               review={booking.review?.comment}
               reviewDate={booking.review?.dateComment}
+              role="Client"
               onPressConfirm={() => handleConfirm(booking.paymentId)}
               onPressCancel={() => handleCancel(booking.id)}
+              onSubmitReview={handleSubmitReview}
             />
           ))}
         </View>
@@ -216,25 +246,15 @@ export default function BookingList() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   filterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: 16, marginTop: 20, marginBottom: 20,
   },
   filterLabel: {
-    fontSize: 16,
-    marginLeft: 5,
-    marginRight: 8,
-    fontWeight: 'bold',
+    fontSize: 16, marginLeft: 5, marginRight: 8, fontWeight: 'bold',
   },
   filterButton: {
-    borderWidth: 1,
-    borderColor: '#a478dd',
-    borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    marginHorizontal: 2,
+    borderWidth: 1, borderColor: '#a478dd', borderRadius: 20,
+    paddingVertical: 4, paddingHorizontal: 12, marginHorizontal: 2,
   },
   filterButtonText: {
     color: '#a478dd',

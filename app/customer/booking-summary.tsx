@@ -1,5 +1,3 @@
-// src/screens/customer/BookingSummaryScreen.tsx
-
 import AppText from '@/components/ui/AppText';
 import BookingSummaryCard from '@/components/ui/BookingSummaryCard';
 import Footer from '@/components/ui/Footer';
@@ -12,30 +10,57 @@ import Toast from 'react-native-toast-message';
 
 export default function BookingSummaryScreen() {
   const router = useRouter();
-  const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
+  // Récupère les params envoyés depuis ProviderProfileScreen
+  const {
+    providerId,
+    serviceId,
+    scheduleId,
+    totalPrice,
+    customerId
+  } = useLocalSearchParams<{
+    providerId: string;
+    serviceId: string;
+    scheduleId: string;
+    totalPrice: string;
+    customerId: string;
+  }>();
+
   const [bookingDetails, setBookingDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBookingDetails = async () => {
-      try {
-        const response = await api.get(`/bookings/${bookingId}`);
-        setBookingDetails(response.data);
-      } catch (error) {
-        console.error('Erreur lors de la récupération du booking:', error);
+    const createBooking = async () => {
+      if (!providerId || !serviceId || !scheduleId || !customerId || !totalPrice) {
         Toast.show({
           type: 'error',
           text1: 'Erreur',
-          text2: 'Impossible de charger les détails de la réservation.',
+          text2: 'Informations manquantes pour créer la réservation.',
+        });
+        setLoading(false);
+        return;
+      }
+      try {
+        const response = await api.post('/bookings', {
+          providerId: Number(providerId),
+          serviceId: Number(serviceId),
+          scheduleId: Number(scheduleId),
+          customerId: Number(customerId),
+          totalPrice: Number(totalPrice),
+        });
+        setBookingDetails(response.data);
+      } catch (error) {
+        console.error('Erreur lors de la création du booking:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: 'Impossible de créer la réservation.',
         });
       } finally {
         setLoading(false);
       }
     };
-    if (bookingId) {
-      fetchBookingDetails();
-    }
-  }, [bookingId]);
+    createBooking();
+  }, [providerId, serviceId, scheduleId, customerId, totalPrice]);
 
   const handleConfirmReservation = () => {
     Toast.show({
@@ -44,7 +69,6 @@ export default function BookingSummaryScreen() {
       text2: 'Votre réservation a bien été enregistrée.',
       topOffset: 100,
     });
-
     setTimeout(() => {
       router.push('/customer/booking-list');
     }, 1500);

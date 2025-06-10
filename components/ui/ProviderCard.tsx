@@ -22,8 +22,10 @@ export default function ProviderCard({
   onPressProfile,
   role = 'PROVIDER',
 }: ProviderCardProps) {
+  // Formatage propre de la note
   const displayedRating = rating != null ? rating.toFixed(1) : 'N/A';
 
+  // Source de l'avatar
   const avatarSource =
     typeof imageUri === 'string' && imageUri.length > 0
       ? { uri: imageUri }
@@ -43,11 +45,11 @@ export default function ProviderCard({
 
       <View style={styles.infoContainer}>
         <AppText style={styles.name}>{name}</AppText>
-        <AppText style={styles.category}>{category}</AppText>
+        <AppText style={styles.category}>{category || 'Makeup Artist'}</AppText>
 
         <View style={styles.addressRow}>
           <Image source={require('@/assets/images/locationapi.png')} style={styles.locationIcon} />
-          <AppText style={styles.address}>{address}</AppText>
+          <AppText style={styles.address}>{address || 'Adresse non renseignée'}</AppText>
         </View>
 
         <TouchableOpacity style={styles.profileButton} onPress={onPressProfile}>
@@ -121,7 +123,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 18,
-    textAlign: 'justify',
   },
   address: {
     fontSize: 15,

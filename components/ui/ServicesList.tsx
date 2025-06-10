@@ -43,7 +43,7 @@ const ServicesList: React.FC<ServicesListProps> = ({ services, onEdit, refreshSe
       setModalVisible(false);
       setServiceToDelete(null);
       refreshServices();
-    } catch (err) {
+    } catch  {
       setModalVisible(false);
       setServiceToDelete(null);
       Toast.show({

@@ -143,6 +143,8 @@ export default function HeaderGradient({
   menuItems = [],
   onMenuItemPress,
 }: HeaderGradientProps) {
+  console.log('🟣 HeaderGradient - searchQuery:', searchQuery);
+  console.log('🟣 HeaderGradient - locationQuery:', locationQuery);
   const { currentUser } = useAuth();
   const defaultAvatar = getDefaultAvatar(
   (currentUser?.role?.toUpperCase() as 'CLIENT' | 'PROVIDER' | 'ADMIN') || 'CLIENT'
