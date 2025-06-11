@@ -47,6 +47,9 @@ export default function BookingSummaryScreen() {
           customerId: Number(customerId),
           totalPrice: Number(totalPrice),
         });
+
+        console.log('bookingDetails reçus:', response.data); // <-- Ajouté ici
+
         setBookingDetails(response.data);
       } catch (error) {
         console.error('Erreur lors de la création du booking:', error);
@@ -75,7 +78,9 @@ export default function BookingSummaryScreen() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return ''; // Si la date est absente, retourne une chaîne vide
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return ''; // Si la date est invalide, retourne une chaîne vide
     const options: Intl.DateTimeFormatOptions = {
       weekday: 'long',
       year: 'numeric',

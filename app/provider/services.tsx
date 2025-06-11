@@ -15,31 +15,52 @@ export default function ServicesScreen() {
   const router = useRouter();
   const { currentUser } = useAuth();
   const [services, setServices] = useState<any[]>([]);
+  const [filteredServices, setFilteredServices] = useState<any[]>([]); // Liste filtrée à afficher
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [serviceToEdit, setServiceToEdit] = useState<any | null>(null);
+  const [searchQuery, setSearchQuery] = useState(''); // État pour recherche
 
   const providerAvatar = require('@/assets/images/avatarprovider.png');
 
-  const checkJwtToken = async () => {
-    const jwt = await getItem('jwtToken');
-    console.log('🟣 JWT récupéré avant appel API:', jwt);
-  };
-
+  // Récupère la liste des services pour le provider connecté
   const fetchServices = useCallback(async () => {
     if (!currentUser?.id) return;
 
-    console.log('🔍 currentUser.id envoyé:', currentUser?.id);
-    await checkJwtToken();
-
     try {
-      const response = await api.get(`/makeup-services/provider/${currentUser.id}`);
-      console.log('✅ Data reçue:', response.data);
+      const jwt = await getItem('jwtToken');
+      console.log('🟣 JWT récupéré avant appel API:', jwt);
 
-      if (Array.isArray(response.data)) {
-        setServices(response.data);
-      } else {
-        console.error('❌ Données API inattendues :', response.data);
-        setServices([]);
+      let response = await api.get(`/makeup-services/provider/${currentUser.id}`);
+      let data = response.data;
+
+      // Gestion cas tableau JSON collé en string
+      if (typeof data === 'string') {
+        if (data.startsWith('[') && data.includes('][')) {
+          const parts = data.split('][');
+          const firstArray = JSON.parse(parts[0] + ']');
+          const secondArray = JSON.parse('[' + parts[1]);
+          data = [...firstArray, ...secondArray];
+        } else {
+          data = JSON.parse(data);
+        }
       }
+
+      if (!Array.isArray(data)) {
+        console.error('❌ Données API inattendues :', data);
+        setServices([]);
+        setFilteredServices([]);
+        return;
+      }
+
+      // Supprimer doublons sur id
+      const uniqueServicesMap = new Map();
+      data.forEach((service: any) => {
+        uniqueServicesMap.set(service.id, service);
+      });
+      const uniqueServices = Array.from(uniqueServicesMap.values());
+
+      setServices(uniqueServices);
+      setFilteredServices(uniqueServices);
     } catch (error) {
       console.error('Erreur lors de la récupération des services :', error);
       Toast.show({
@@ -50,12 +71,28 @@ export default function ServicesScreen() {
     }
   }, [currentUser]);
 
-  const handleServiceAdded = async () => {
+  // Met à jour la liste filtrée quand la recherche change
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    if (text.trim() === '') {
+      setFilteredServices(services);
+    } else {
+      const lowerText = text.toLowerCase();
+      const filtered = services.filter(s =>
+        s.title.toLowerCase().includes(lowerText) ||
+        s.description.toLowerCase().includes(lowerText) ||
+        s.categoryTitle.toLowerCase().includes(lowerText)
+      );
+      setFilteredServices(filtered);
+    }
+  };
+
+  // Après ajout ou modification
+  const handleServiceAddedOrUpdated = async () => {
     await fetchServices();
     Toast.show({
       type: 'success',
-      text1: 'Prestation ajoutée',
-      text2: 'La liste a été mise à jour !',
+      text1: 'La liste a été mise à jour !',
     });
   };
 
@@ -63,11 +100,7 @@ export default function ServicesScreen() {
     fetchServices();
   }, [fetchServices]);
 
-  const handleEditService = (serviceId: number) => {
-    console.log('👉 Modifier service ID:', serviceId);
-    // Ajoute ici ta logique pour modifier (ouvrir un modal par exemple)
-  };
-
+  // Suppression d'un service
   const handleDeleteService = async (serviceId: number) => {
     try {
       await api.delete(`/makeup-services/${serviceId}`);
@@ -84,6 +117,13 @@ export default function ServicesScreen() {
         text2: 'Impossible de supprimer la prestation',
       });
     }
+  };
+
+  // Edition
+  const handleEditService = (serviceId: number) => {
+    const service = services.find(s => s.id === serviceId) || null;
+    setServiceToEdit(service);
+    setIsModalVisible(true);
   };
 
   const providerMenuItems = [
@@ -126,27 +166,36 @@ export default function ServicesScreen() {
         menuItems={providerMenuItems}
         onMenuItemPress={handleMenuItemPress}
         avatarUri={providerAvatar}
+        searchQuery={searchQuery}
+        onChangeSearch={handleSearchChange} 
       />
 
       <TouchableOpacity
         style={[styles.filterButton, { alignSelf: 'flex-start', marginLeft: 16, marginTop: 10 }]}
-        onPress={() => setIsModalVisible(true)}
+        onPress={() => {
+          setServiceToEdit(null);
+          setIsModalVisible(true);
+        }}
       >
         <AppText style={styles.filterButtonText}>+ Ajouter une prestation</AppText>
       </TouchableOpacity>
 
       <ServicesList
-        services={services}
+        services={filteredServices} // <-- afficher la liste filtrée
         onEdit={handleEditService}
-        onDelete={handleDeleteService}
+        refreshServices={fetchServices}
       />
 
       <Footer />
 
       <AddServiceModal
         visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        onServiceAdded={handleServiceAdded}
+        onClose={() => {
+          setIsModalVisible(false);
+          setServiceToEdit(null);
+        }}
+        onServiceAdded={handleServiceAddedOrUpdated}
+        serviceToEdit={serviceToEdit}
       />
     </SafeAreaView>
   );

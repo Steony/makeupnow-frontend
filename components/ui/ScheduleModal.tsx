@@ -1,38 +1,66 @@
 import AppText from '@/components/ui/AppText';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface ScheduleModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (slotData: { date: string; startTime: string; endTime: string }) => void;
-  providerAddress?: string; // ✅ Ajout pour affichage en lecture seule
+  initialData?: { date: string; startTime: string; endTime: string }; // Pour modification
+  mode?: 'add' | 'edit';
 }
 
 export default function ScheduleModal({
   visible,
   onClose,
   onSubmit,
-  providerAddress, // ✅ récupère l’adresse en prop
+  initialData,
+  mode = 'add',
 }: ScheduleModalProps) {
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
 
+  useEffect(() => {
+    if (initialData) {
+      setDate(initialData.date);
+      setStartTime(initialData.startTime);
+      setEndTime(initialData.endTime);
+    } else {
+      setDate('');
+      setStartTime('');
+      setEndTime('');
+    }
+  }, [initialData, visible]);
+
   const handleSubmit = () => {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+    if (!dateRegex.test(date)) {
+      alert("Date invalide. Format attendu : AAAA-MM-JJ (ex: 2025-06-10)");
+      return;
+    }
+    if (!timeRegex.test(startTime)) {
+      alert("Heure de début invalide. Format attendu : HH:mm (ex: 09:00)");
+      return;
+    }
+    if (!timeRegex.test(endTime)) {
+      alert("Heure de fin invalide. Format attendu : HH:mm (ex: 13:00)");
+      return;
+    }
+
     onSubmit({ date, startTime, endTime });
-    onClose();
+    // onClose est appelé après succès dans le parent pour éviter fermeture prématurée
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          <AppText style={styles.title}>Ajouter un créneau</AppText>
-
-          
-
-          <View style={styles.separator} />
+          <AppText style={styles.title}>
+            {mode === 'add' ? 'Ajouter un créneau' : 'Modifier le créneau'}
+          </AppText>
 
           <AppText style={styles.label}>Date</AppText>
           <TextInput
@@ -59,7 +87,9 @@ export default function ScheduleModal({
           />
 
           <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-            <AppText style={styles.buttonText}>Valider</AppText>
+            <AppText style={styles.buttonText}>
+              {mode === 'add' ? 'Valider' : 'Enregistrer'}
+            </AppText>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -89,17 +119,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     alignSelf: 'center',
     marginBottom: 10,
-  },
-  address: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-    fontStyle: 'italic',
-  },
-  separator: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    marginVertical: 10,
   },
   label: {
     fontSize: 16,

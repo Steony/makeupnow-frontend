@@ -2,7 +2,7 @@ import AppText from '@/components/ui/AppText';
 import FilterModalCategory from '@/components/ui/FilterModalCategory';
 import { api } from '@/config/api';
 import { useAuth } from '@/utils/AuthContext';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   ScrollView,
@@ -13,16 +13,28 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 
+interface MakeupService {
+  id: number;
+  title: string;
+  price: number;
+  categoryTitle: string;
+  categoryId: number;
+  description: string;
+  duration: number;
+}
+
 interface AddServiceModalProps {
   visible: boolean;
   onClose: () => void;
   onServiceAdded: () => void;
+  serviceToEdit?: MakeupService | null; // MODIF : service à modifier (optionnel)
 }
 
 export default function AddServiceModal({
   visible,
   onClose,
   onServiceAdded,
+  serviceToEdit = null, // MODIF : valeur par défaut null
 }: AddServiceModalProps) {
   const { currentUser } = useAuth();
   const [title, setTitle] = useState('');
@@ -33,35 +45,75 @@ export default function AddServiceModal({
   const [duration, setDuration] = useState('');
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
 
+  // MODIF : Remplir les champs si serviceToEdit change
+  useEffect(() => {
+    if (serviceToEdit) {
+      setTitle(serviceToEdit.title);
+      setCategoryId(serviceToEdit.categoryId);
+      setCategoryTitle(serviceToEdit.categoryTitle);
+      setDescription(serviceToEdit.description);
+      setPrice(serviceToEdit.price.toString());
+      setDuration(serviceToEdit.duration.toString());
+    } else {
+      resetForm();
+    }
+  }, [serviceToEdit, visible]);
+
+  const resetForm = () => {
+    setTitle('');
+    setCategoryId(null);
+    setCategoryTitle('');
+    setDescription('');
+    setPrice('');
+    setDuration('');
+  };
+
   const handleSubmit = async () => {
     if (!title || !categoryId || !description || !price || !duration) {
       Toast.show({ type: 'error', text1: 'Tous les champs sont requis' });
       return;
     }
+    if (!currentUser?.id) {
+      Toast.show({ type: 'error', text1: 'Utilisateur non connecté' });
+      return;
+    }
+
     try {
-      await api.post('/makeup-services', {
-        title,
-        categoryId,
-        description,
-        price: parseFloat(price),
-        duration: parseInt(duration),
-        providerId: currentUser?.id,
-      });
-      Toast.show({ type: 'success', text1: 'Prestation ajoutée !' });
+      if (serviceToEdit) {
+        // MODIF : PUT ou PATCH pour modifier
+        await api.put(`/makeup-services/${serviceToEdit.id}`, {
+          title,
+          categoryId,
+          description,
+          price: parseFloat(price),
+          duration: parseInt(duration, 10),
+          providerId: currentUser.id,
+        });
+        Toast.show({ type: 'success', text1: 'Prestation modifiée !' });
+      } else {
+        // POST pour création
+        await api.post('/makeup-services', {
+          title,
+          categoryId,
+          description,
+          price: parseFloat(price),
+          duration: parseInt(duration, 10),
+          providerId: currentUser.id,
+        });
+        Toast.show({ type: 'success', text1: 'Prestation ajoutée !' });
+      }
+
       onServiceAdded();
       onClose();
-      setTitle('');
-      setCategoryId(null);
-      setCategoryTitle('');
-      setDescription('');
-      setPrice('');
-      setDuration('');
+      resetForm();
     } catch (error) {
-      console.error('Erreur lors de la création de la prestation :', error);
+      console.error('Erreur lors de la création/modification de la prestation :', error);
       Toast.show({
         type: 'error',
         text1: 'Erreur',
-        text2: "Impossible d'ajouter la prestation",
+        text2: serviceToEdit
+          ? "Impossible de modifier la prestation"
+          : "Impossible d'ajouter la prestation",
       });
     }
   };
@@ -70,7 +122,9 @@ export default function AddServiceModal({
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <ScrollView contentContainerStyle={styles.modalContainer}>
-          <AppText style={styles.title}>Ajouter une prestation</AppText>
+          <AppText style={styles.title}>
+            {serviceToEdit ? 'Modifier une prestation' : 'Ajouter une prestation'}
+          </AppText>
 
           <AppText style={styles.label}>Titre</AppText>
           <TextInput
@@ -124,10 +178,15 @@ export default function AddServiceModal({
           </View>
 
           <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-            <AppText style={styles.buttonText}>Valider</AppText>
+            <AppText style={styles.buttonText}>
+              {serviceToEdit ? 'Modifier' : 'Valider'}
+            </AppText>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <TouchableOpacity style={styles.closeButton} onPress={() => {
+            onClose();
+            resetForm();
+          }}>
             <AppText style={styles.closeButtonText}>Fermer</AppText>
           </TouchableOpacity>
 

@@ -32,19 +32,48 @@ export default function FilterModalCategory({
   const [categories, setCategories] = useState<Category[]>([]); // ✅
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await api.get('/categories');
-        setCategories(response.data); // ✅ récupère [{id, title}]
-      } catch (error) {
-        console.error('Erreur lors de la récupération des catégories:', error);
-      }
-    };
+  const fetchCategories = async () => {
+    try {
+      const response = await api.get('/categories');
+      let data = response.data;
 
-    if (visible) {
-      fetchCategories();
+      if (typeof data === 'string') {
+        if (data.startsWith('[') && data.includes('][')) {
+          const parts = data.split('][');
+          const firstArray = JSON.parse(parts[0] + ']');
+          // On ne garde que le premier tableau
+          data = firstArray;
+        } else {
+          data = JSON.parse(data);
+        }
+      }
+
+      if (!Array.isArray(data)) {
+        console.error('Les catégories ne sont pas un tableau:', data);
+        setCategories([]);
+        return;
+      }
+
+      // Nettoyer doublons par id au cas où
+      const uniqueCategories = data.filter(
+        (category, index, self) =>
+          index === self.findIndex((c) => c.id === category.id)
+      );
+
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des catégories:', error);
+      setCategories([]);
     }
-  }, [visible]);
+  };
+
+  if (visible) {
+    fetchCategories();
+  }
+}, [visible]);
+
+
+
 
   const toggleCategory = (category: Category) => {
     if (selectedCategories.find((c) => c.id === category.id)) {
@@ -77,7 +106,9 @@ export default function FilterModalCategory({
 
               {isMoreVisible && (
                 <>
+                {console.log('categories:', categories)}
                   <ScrollView style={{ marginBottom: 10 }}>
+                    
                     {categories.map((category) => (
                       <TouchableOpacity
                         key={category.id}

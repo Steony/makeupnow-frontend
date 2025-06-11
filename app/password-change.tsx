@@ -6,7 +6,7 @@ import { api } from '@/config/api';
 import { useAuth } from '@/utils/AuthContext';
 import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 export default function PasswordChangeScreen() {
@@ -14,16 +14,24 @@ export default function PasswordChangeScreen() {
 
   // Dynamique : avatar selon le rôle
   const avatarUri = useMemo(
-  () => getDefaultAvatar((currentUser?.role as 'CLIENT' | 'PROVIDER' | 'ADMIN') || 'CLIENT'),
-  [currentUser]
-);
-
+    () => getDefaultAvatar((currentUser?.role as 'CLIENT' | 'PROVIDER' | 'ADMIN') || 'CLIENT'),
+    [currentUser]
+  );
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const isDisabled =
+    !currentPassword ||
+    !newPassword ||
+    !confirmPassword ||
+    loading;
 
   const handleChangePassword = async () => {
+    if (isDisabled) return;
+
     if (newPassword !== confirmPassword) {
       Toast.show({
         type: 'error',
@@ -33,10 +41,12 @@ export default function PasswordChangeScreen() {
       return;
     }
 
+    setLoading(true);
+
     try {
       const passwordData = {
-        currentPassword: currentPassword,
-        newPassword: newPassword,
+        currentPassword,
+        newPassword,
       };
 
       const response = await api.put('/users/update-password', passwordData);
@@ -61,6 +71,8 @@ export default function PasswordChangeScreen() {
           error.response?.data ||
           "Impossible de mettre à jour le mot de passe.",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -80,6 +92,8 @@ export default function PasswordChangeScreen() {
           onChangeText={setCurrentPassword}
           secureTextEntry
           showEyeIcon
+          autoCapitalize="none"
+          textContentType="password"
         />
 
         <AppText style={styles.label}>Nouveau mot de passe</AppText>
@@ -90,6 +104,8 @@ export default function PasswordChangeScreen() {
           onChangeText={setNewPassword}
           secureTextEntry
           showEyeIcon
+          autoCapitalize="none"
+          textContentType="newPassword"
         />
 
         <AppText style={styles.label}>Confirmer le nouveau mot de passe</AppText>
@@ -100,10 +116,23 @@ export default function PasswordChangeScreen() {
           onChangeText={setConfirmPassword}
           secureTextEntry
           showEyeIcon
+          autoCapitalize="none"
+          textContentType="newPassword"
         />
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}>
-          <AppText style={styles.saveButtonText}>Enregistrer</AppText>
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            isDisabled && { backgroundColor: '#ccc' },
+          ]}
+          onPress={handleChangePassword}
+          disabled={isDisabled}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <AppText style={styles.saveButtonText}>Enregistrer</AppText>
+          )}
         </TouchableOpacity>
       </View>
 

@@ -147,9 +147,8 @@ export default function HeaderGradient({
   console.log('🟣 HeaderGradient - locationQuery:', locationQuery);
   const { currentUser } = useAuth();
   const defaultAvatar = getDefaultAvatar(
-  (currentUser?.role?.toUpperCase() as 'CLIENT' | 'PROVIDER' | 'ADMIN') || 'CLIENT'
-);
-
+    (currentUser?.role?.toUpperCase() as 'CLIENT' | 'PROVIDER' | 'ADMIN') || 'CLIENT'
+  );
 
   const dynamicAvatar =
     avatarUri || defaultAvatar;
@@ -187,7 +186,14 @@ export default function HeaderGradient({
           />
         </View>
 
-        {title && <AppText style={styles.title}>{title}</AppText>}
+        {title && (
+          <AppText style={styles.title}>
+            {title.includes('Bienvenue') && currentUser?.name
+              ? `Bienvenue, ${currentUser.name} !`
+              : title}
+          </AppText>
+        )}
+
         {subtitle && <AppText style={styles.subtitle}>{subtitle}</AppText>}
 
         {showSearch && (

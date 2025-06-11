@@ -13,9 +13,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 
-/**
- * Helper universel pour parser les réponses API foireuses (string JSON, array, objet, etc.)
- */
+// Helper pour parser les réponses API foireuses
 function parseApiData(data: any) {
   if (typeof data === 'string') {
     const matchArray = data.match(/\[.*?\]/s);
@@ -29,6 +27,12 @@ function parseApiData(data: any) {
     } catch {}
   }
   return data;
+}
+
+// 🔤 Fonction utilitaire pour mettre la 1ère lettre en majuscule
+function capitalize(str: string) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 export default function ProviderProfileScreen() {
@@ -121,9 +125,27 @@ export default function ProviderProfileScreen() {
             <Text style={styles.category}>
               {providerProfile?.categoriesString || ''}
             </Text>
-            <View style={styles.addressRow}>
-              <Image source={require('../assets/images/locationapi.png')} style={styles.locationIcon} />
-              <Text style={styles.address}>{providerProfile?.address || ''}</Text>
+
+            {/* Coordonnées en colonne */}
+            <View style={styles.contactsContainer}>
+              {providerProfile?.address && (
+                <View style={styles.contactRow}>
+                  <Image source={require('../assets/images/locationapi.png')} style={styles.contactIcon} />
+                  <Text style={styles.contactText}>{providerProfile.address}</Text>
+                </View>
+              )}
+              {providerProfile?.email && (
+                <View style={styles.contactRow}>
+                  <Image source={require('../assets/images/mailprovider.png')} style={styles.contactIcon} />
+                  <Text style={styles.contactText}>{providerProfile.email}</Text>
+                </View>
+              )}
+              {providerProfile?.phoneNumber && (
+                <View style={styles.contactRow}>
+                  <Image source={require('../assets/images/phoneprovider.png')} style={styles.contactIcon} />
+                  <Text style={styles.contactText}>{providerProfile.phoneNumber}</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -178,7 +200,14 @@ export default function ProviderProfileScreen() {
                   key={item.id}
                   date={
                     item.startTime
-                      ? new Date(item.startTime).toLocaleDateString('fr-FR')
+                      ? capitalize(
+                          new Date(item.startTime).toLocaleDateString('fr-FR', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })
+                        )
                       : ''
                   }
                   hours={[
@@ -189,7 +218,16 @@ export default function ProviderProfileScreen() {
                   selectedGlobal={selectedGlobal}
                   onSelectHour={(hour) =>
                     handleSelectHour(
-                      item.startTime ? new Date(item.startTime).toLocaleDateString('fr-FR') : '',
+                      item.startTime
+                        ? capitalize(
+                            new Date(item.startTime).toLocaleDateString('fr-FR', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          )
+                        : '',
                       hour,
                       item.id // transmet l'id du créneau ici
                     )
@@ -244,10 +282,30 @@ const styles = StyleSheet.create({
   ratingContainer: { flexDirection: 'row', alignItems: 'center' },
   starIconLarge: { width: 20, height: 20, marginRight: 4 },
   ratingText: { fontSize: 16, fontWeight: 'bold', color: '#000' },
-  category: { fontSize: 20, color: '#555', marginBottom: 7, marginTop: 9, fontWeight: '600' },
-  addressRow: { flexDirection: 'row', alignItems: 'center' },
-  locationIcon: { width: 25, height: 25, marginRight: 4 },
-  address: { fontSize: 17, color: '#444', marginTop: 3 },
+  category: { fontSize: 20, color: '#555', marginBottom: 7, marginTop: 9, fontWeight: '600', textAlign: 'center' },
+
+  // Coordonnées centrées en colonne
+  contactColumnGroup: {
+  marginTop: 16,
+  alignItems: 'flex-start',  
+},
+contactRow: {
+  flexDirection: 'row',       
+  alignItems: 'center',       
+  marginBottom: 15,       
+  marginTop: 5,     
+},
+contactIcon: {
+  width: 25,
+  height: 25,
+  marginRight: 8,    
+},
+contactText: {
+  fontSize: 16,
+},
+
+contactsContainer: { },
+
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#6229C6' },
   validateButton: { backgroundColor: '#7946CD', borderRadius: 5, paddingVertical: 14, margin: 8, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.9, shadowRadius: 9, elevation: 2 },

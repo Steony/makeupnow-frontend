@@ -6,8 +6,8 @@ import ReviewModal from './ReviewModal';
 
 interface BookingCardProps {
   title: string;
-  date: string;
-  time: string;
+  dateSchedule: string;  // ISO string yyyy-MM-dd
+  timeSchedule: string;  // ISO string HH:mm:ss
   price: number;
   status: string;
   address: string;
@@ -20,18 +20,19 @@ interface BookingCardProps {
   rating?: number;
   review?: string;
   reviewDate?: string;
+  reviewId?: string;  // id de la review (utile pour modifier)
   role: 'Admin' | 'Client' | 'Provider';
   onPressConfirm?: () => void;
   onPressCancel?: () => void;
   onPressDeleteReview?: () => void;
   onPressModifyPayment?: () => void;
-  onSubmitReview?: (rating: number, comment: string) => void;
+  onSubmitReview?: (rating: number, comment: string, reviewId?: string | null) => void;
 }
 
 export default function BookingCard({
   title,
-  date,
-  time,
+  dateSchedule,
+  timeSchedule,
   price,
   status,
   address,
@@ -44,6 +45,7 @@ export default function BookingCard({
   rating,
   review,
   reviewDate,
+  reviewId,
   role,
   onPressConfirm,
   onPressCancel,
@@ -61,6 +63,9 @@ export default function BookingCard({
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [modifyPaymentModalVisible, setModifyPaymentModalVisible] = useState(false);
   const [deleteReviewModalVisible, setDeleteReviewModalVisible] = useState(false);
+
+  // Id de la review en édition (null = création)
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
   const showToast = (message: string) => {
     Toast.show({
@@ -89,11 +94,43 @@ export default function BookingCard({
     setModifyPaymentModalVisible(false);
   };
 
+  // Ouvre modal en mode création d'avis
+  const handleOpenReviewModalForCreate = () => {
+    setEditingReviewId(null);
+    setIsEditingReview(false);
+    setShowReviewModal(true);
+  };
+
+  // Ouvre modal en mode modification d'avis
+  const handleOpenReviewModalForEdit = () => {
+    setEditingReviewId(reviewId ?? null);
+    setIsEditingReview(true);
+    setShowReviewModal(true);
+  };
+
+  // Soumission du review (create ou update selon editingReviewId)
   const handleSubmitReview = (ratingValue: number, commentValue: string) => {
-    onSubmitReview && onSubmitReview(ratingValue, commentValue);
+    onSubmitReview && onSubmitReview(ratingValue, commentValue, editingReviewId ?? null);
     showToast('Avis soumis !');
     setShowReviewModal(false);
     setIsEditingReview(false);
+  };
+
+  // Format date au format dd/MM/yy
+  const formatDateSchedule = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(2);
+    return `${day}/${month}/${year}`;
+  };
+
+  // Format time au format HH:mm
+  const formatTimeSchedule = (timeStr: string) => {
+    if (!timeStr) return '';
+    const date = new Date(`1970-01-01T${timeStr}Z`);
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
 
   const showProviderInfo = role === 'Client' || (role === 'Admin' && providerName);
@@ -179,7 +216,7 @@ export default function BookingCard({
         </View>
       </View>
 
-      <AppText style={styles.date}>{date} à {time}</AppText>
+      <AppText style={styles.date}>{formatDateSchedule(dateSchedule)} à {formatTimeSchedule(timeSchedule)}</AppText>
       <View style={styles.row}>
         <Image source={require('../../assets/images/clock.png')} style={styles.icon} />
         <AppText style={styles.duration}>2h</AppText>
@@ -223,7 +260,7 @@ export default function BookingCard({
           {(role === 'Client' || role === 'Admin') && (
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
               {/* Modifier l'avis */}
-              <TouchableOpacity onPress={() => { setIsEditingReview(true); setShowReviewModal(true); }} style={[styles.confirmButton, { paddingVertical: 6, paddingHorizontal: 12 }]}>
+              <TouchableOpacity onPress={handleOpenReviewModalForEdit} style={[styles.confirmButton, { paddingVertical: 6, paddingHorizontal: 12 }]}>
                 <AppText style={styles.buttonText}>Modifier l’avis</AppText>
               </TouchableOpacity>
 
@@ -237,19 +274,26 @@ export default function BookingCard({
           )}
         </View>
       ) : (
-       // Pas d'avis : bouton pour écrire un avis (uniquement client)
-role === 'Client' && (
-  <TouchableOpacity
-    onPress={() => { setIsEditingReview(false); setShowReviewModal(true); }}
-    style={[styles.writeReviewButton, { marginTop: 10 }]}
-  >
-    <AppText style={styles.buttonText}>Écrire un avis</AppText>
-  </TouchableOpacity>
-)
+        // Pas d'avis : bouton pour écrire un avis (uniquement client)
+        role === 'Client' && (
+          <TouchableOpacity
+            onPress={handleOpenReviewModalForCreate}
+            style={[styles.writeReviewButton, { marginTop: 10 }]}
+          >
+            <AppText style={styles.buttonText}>Écrire un avis</AppText>
+          </TouchableOpacity>
+        )
+      )}
 
-)}{/* Boutons principaux selon rôle */}
+      {/* Boutons principaux selon rôle */}
+
       {role === 'Admin' && (
         <View style={styles.buttonRow}>
+          {status === 'Confirmée' && (
+            <TouchableOpacity style={styles.confirmButton} onPress={() => setConfirmModalVisible(true)}>
+              <AppText style={styles.buttonText}>Confirmer le paiement</AppText>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.confirmButton} onPress={() => setModifyPaymentModalVisible(true)}>
             <AppText style={styles.buttonText}>Modifier le paiement</AppText>
           </TouchableOpacity>
@@ -283,8 +327,22 @@ role === 'Client' && (
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: '#F6EDF9', borderRadius: 5, padding: 17, marginBottom: 29, shadowColor: '#000', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  card: {
+    backgroundColor: '#F6EDF9',
+    borderRadius: 5,
+    padding: 17,
+    marginBottom: 29,
+    shadowColor: '#000',
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   title: { fontWeight: 'bold', fontSize: 17, color: '#000' },
   status: { fontWeight: 'bold', fontSize: 17 },
   price: { fontWeight: 'bold', fontSize: 18, color: '#000', marginTop: 10, marginRight: 15 },
@@ -305,23 +363,55 @@ const styles = StyleSheet.create({
   reviewDate: { fontSize: 14, color: '#000', marginVertical: 4, marginBottom: 6 },
   reviewText: { fontSize: 14, color: '#000', marginBottom: 6 },
   buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-  confirmButton: { backgroundColor: '#a478dd', borderRadius: 5, padding: 8, marginRight: 7 },
-  cancelButton: { backgroundColor: '#000', borderRadius: 5, padding: 8 },
-  deleteReviewButton: { backgroundColor: '#000', borderRadius: 5, paddingVertical: 8, paddingHorizontal: 12, alignSelf: 'flex-start', marginTop: 10, marginBottom: 10 },
+  confirmButton: {
+    backgroundColor: '#a478dd',
+    borderRadius: 5,
+    padding: 8,
+    marginRight: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  cancelButton: {
+    backgroundColor: '#000',
+    borderRadius: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    marginBottom: 10,
+  },
   buttonText: { color: '#fff' },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
-  modalContainer: { width: '80%', backgroundColor: '#fff', borderRadius: 8, padding: 20, alignItems: 'center' },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 20,
+    alignItems: 'center',
+  },
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
   modalText: { fontSize: 16, textAlign: 'center', marginBottom: 20 },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
-  modalButton: { flex: 1, alignItems: 'center', padding: 10, marginHorizontal: 5, borderRadius: 5, backgroundColor: '#ddd' },
+  modalButton: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 10,
+    marginHorizontal: 5,
+    borderRadius: 5,
+    backgroundColor: '#ddd',
+  },
   modalButtonText: { color: '#000', fontWeight: 'bold' },
   writeReviewButton: {
-  width: 150,       // largeur fixe ou ce que tu veux
-  alignItems: 'center', // pour centrer le texte horizontalement
-  paddingVertical: 8,   // conserve un padding vertical confortable
-  borderRadius: 5,
-  backgroundColor: '#a478dd',
-},
-
+    width: 150,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 5,
+    backgroundColor: '#a478dd',
+  },
 });

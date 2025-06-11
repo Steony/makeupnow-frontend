@@ -7,16 +7,11 @@ import { useRouter } from 'expo-router';
 import { Image, SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function HomeAdminScreen() {
-  
   const { currentUser } = useAuth();
   const router = useRouter();
 
-  // Avatar statique (à remplacer si besoin)
-  const adminAvatar = require('@/assets/images/avataradmin.png'); // Mets une image admin ici
+  const adminAvatar = require('@/assets/images/avataradmin.png');
 
- 
-
-  // Menu latéral admin
   const adminMenuItems = [
     'Mon dashboard',
     'Gérer les utilisateurs',
@@ -50,7 +45,7 @@ export default function HomeAdminScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <HeaderGradient
-            title={`Bienvenue ${currentUser?.name ?? 'Utilisateur'},`}
+        title={`Bienvenue, ${currentUser?.name || 'Admin'} !`}
         subtitle="Administrez vos utilisateurs et réservations"
         avatarUri={adminAvatar}
         showMenu={true}
@@ -58,47 +53,42 @@ export default function HomeAdminScreen() {
         menuItems={adminMenuItems}
         onMenuItemPress={handleMenuItemPress}
       />
- <View style={{ flex: 1, justifyContent: 'space-between' }}>
- 
-      <View style={styles.profileContainer}>
-        <View style={styles.rowButtonsContainer}>
-          {/* Bloc 1 : Gérer les utilisateurs */}
-          <View style={styles.buttonBlock}>
-            <TouchableOpacity onPress={() => router.push('/admin/user-management')}>
+      <View style={{ flex: 1, justifyContent: 'space-between' }}>
+        <View style={styles.profileContainer}>
+          <View style={styles.rowButtonsContainer}>
+            <View style={styles.buttonBlock}>
+              <TouchableOpacity onPress={() => router.push('/admin/user-management')}>
+                <Image
+                  source={require('@/assets/images/manage-users.png')}
+                  style={styles.buttonIcon}
+                />
+              </TouchableOpacity>
+              <AppText style={styles.buttonLabel}>Gérer les utilisateurs</AppText>
+            </View>
+
+            <View style={styles.buttonBlock}>
+              <TouchableOpacity onPress={() => router.push('/settings')}>
+                <Image
+                  source={require('@/assets/images/setting.png')}
+                  style={styles.buttonIcon}
+                />
+              </TouchableOpacity>
+              <AppText style={styles.buttonLabel}>Paramètres</AppText>
+            </View>
+          </View>
+
+          <View style={[styles.buttonBlock, styles.centeredButton]}>
+            <TouchableOpacity onPress={() => router.push('/admin/user-logs')}>
               <Image
-                source={require('@/assets/images/manage-users.png')}
+                source={require('@/assets/images/logs.png')}
                 style={styles.buttonIcon}
               />
             </TouchableOpacity>
-            <AppText style={styles.buttonLabel}>Gérer les utilisateurs</AppText>
-          </View>
-
-          {/* Bloc 2 : Paramètres */}
-          <View style={styles.buttonBlock}>
-            <TouchableOpacity onPress={() => router.push('/settings')}>
-              <Image
-                source={require('@/assets/images/setting.png')}
-                style={styles.buttonIcon}
-              />
-            </TouchableOpacity>
-            <AppText style={styles.buttonLabel}>Paramètres</AppText>
+            <AppText style={styles.buttonLabel}>Logs utilisateurs</AppText>
           </View>
         </View>
-
-        {/* Bloc 3 : Logs utilisateur */}
-        <View style={[styles.buttonBlock, styles.centeredButton]}>
-          <TouchableOpacity onPress={() => router.push('/admin/user-logs')}>
-            <Image
-              source={require('@/assets/images/logs.png')}
-              style={styles.buttonIcon}
-            />
-          </TouchableOpacity>
-          <AppText style={styles.buttonLabel}>Logs utilisateurs</AppText>
-        </View>
-         
+        <Footer />
       </View>
-     <Footer />
-     </View>
     </SafeAreaView>
   );
 }

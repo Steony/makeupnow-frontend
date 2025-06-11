@@ -2,7 +2,7 @@ import AppText from '@/components/ui/AppText';
 import BookingCard from '@/components/ui/BookingCard';
 import Footer from '@/components/ui/Footer';
 import HeaderGradient from '@/components/ui/HeaderGradient';
-import { api } from '@/config/api'; // ✅ Ton instance axios
+import { api } from '@/config/api';
 import { useAuth } from '@/utils/AuthContext';
 import { handleLogout } from '@/utils/authService';
 import { useRouter } from 'expo-router';
@@ -26,79 +26,59 @@ export default function BookingList() {
   const [statusFilter, setStatusFilter] = useState('Tous');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-  useEffect(() => {
-    // Données factices pour test
-    const mockBookings = [
-      {
-        id: 1,
-        serviceTitle: 'Maquillage Mariage',
-        dateBooking: new Date().toISOString(),
-        totalPrice: 120,
-        status: 'CONFIRMED',
-        providerAddress: '12 rue des Fleurs, Paris',
-        providerName: 'Sophie L.',
-        providerEmail: 'sophie@example.com',
-        providerPhone: '0601020304',
-        paymentId: 101,
-        review: {
-          rating: 5,
-          comment: 'Super prestation !',
-          dateComment: new Date().toISOString(),
-        },
-      },
-      {
-        id: 2,
-        serviceTitle: 'Maquillage Shooting',
-        dateBooking: new Date().toISOString(),
-        totalPrice: 90,
-        status: 'CANCELLED',
-        providerAddress: '45 avenue du Parc, Lyon',
-        providerName: 'Julien M.',
-        providerEmail: 'julien@example.com',
-        providerPhone: '0605060708',
-        paymentId: 102,
-        review: null,
-      },
-    ];
-    setBookings(mockBookings);
-
-    /*
-    // Décommenter pour récupération réelle depuis API
+  const loadBookings = async () => {
     if (!currentUser?.id) return;
-    api.get(`/bookings/customer/${currentUser.id}`)
-      .then(response => setBookings(Array.isArray(response.data) ? response.data : []))
-      .catch(error => {
-        console.error('Erreur récupération réservations :', error);
-        ToastAndroid.show('Erreur lors du chargement des réservations', ToastAndroid.SHORT);
-      });
-    */
+    try {
+      const response = await api.get(`/bookings/customer/${currentUser.id}`);
+      let data = response.data;
+
+      if (typeof data === 'string') {
+        // Essayer de parser de manière sécurisée
+        try {
+          // Gérer cas avec concaténation de tableaux JSON : "[...][...]"
+          if (data.startsWith('[') && data.includes('][')) {
+            const parts = data.split('][');
+            data = parts[0] + ']';
+            console.warn('Réponse multiple détectée, on prend la première partie uniquement');
+          }
+          data = JSON.parse(data);
+        } catch (parseError) {
+          console.error('Erreur lors du parsing JSON:', parseError, data);
+          ToastAndroid.show('Erreur dans les données reçues du serveur', ToastAndroid.SHORT);
+          return;
+        }
+      }
+
+      if (Array.isArray(data) && typeof data[0] === 'string') {
+        try {
+          data = data.map(item => JSON.parse(item));
+        } catch (e) {
+          console.error('Erreur parse array JSON:', e);
+          ToastAndroid.show('Erreur dans les données reçues du serveur', ToastAndroid.SHORT);
+          return;
+        }
+      }
+
+      setBookings(data);
+    } catch (error) {
+      console.error('Erreur récupération réservations :', error);
+      ToastAndroid.show('Erreur lors du chargement des réservations', ToastAndroid.SHORT);
+    }
+  };
+
+  useEffect(() => {
+    loadBookings();
   }, [currentUser]);
 
-  // Traduction statut backend → utilisateur
   const translateStatus = (status: string) => {
     switch (status) {
       case 'CONFIRMED': return 'Confirmée';
       case 'COMPLETED': return 'Terminée et payée';
       case 'CANCELLED': return 'Annulée';
-      case 'EN_COURS': return 'En cours';
       default: return status;
     }
   };
 
-  // Format date en dd/MM/yy
-  const formatDate = (isoDate: string) => {
-    const date = new Date(isoDate);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = String(date.getFullYear()).slice(2);
-    return `${day}/${month}/${year}`;
-  };
-
-  // Format heure hh:mm
-  const formatTime = (isoDate: string) =>
-    new Date(isoDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-
-  // Filtres combinés
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch = booking.serviceTitle?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus =
@@ -116,7 +96,6 @@ export default function BookingList() {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  // Confirmer paiement
   const handleConfirm = (paymentId: number) => {
     if (!currentUser?.id) {
       ToastAndroid.show('Erreur : utilisateur non connecté', ToastAndroid.SHORT);
@@ -134,6 +113,7 @@ export default function BookingList() {
             });
             if (response.data) {
               ToastAndroid.show('Paiement confirmé ✅', ToastAndroid.SHORT);
+              await loadBookings();
             }
           } catch {
             ToastAndroid.show('Erreur de confirmation', ToastAndroid.SHORT);
@@ -143,7 +123,6 @@ export default function BookingList() {
     ]);
   };
 
-  // Annuler réservation
   const handleCancel = (bookingId: number) => {
     Alert.alert('Confirmation', 'Annuler la réservation ?', [
       { text: 'Non', style: 'cancel' },
@@ -162,14 +141,28 @@ export default function BookingList() {
     ]);
   };
 
-  // Soumettre avis (à connecter à ton backend)
-  const handleSubmitReview = (rating: number, comment: string) => {
-    console.log('Avis soumis:', rating, comment);
-    ToastAndroid.show('Avis soumis !', ToastAndroid.SHORT);
-    // ici appel API pour enregistrer l'avis
+  const handleSubmitReview = async (rating: number, comment: string, reviewId?: string | null) => {
+    try {
+      if (!currentUser?.id) throw new Error('Utilisateur non connecté');
+      if (reviewId) {
+        await api.put(`/reviews/${reviewId}`, { rating, comment });
+        ToastAndroid.show('Avis modifié avec succès', ToastAndroid.SHORT);
+      } else {
+        await api.post('/reviews', {
+          rating,
+          comment,
+          customerId: currentUser.id,
+          // ajouter les autres champs obligatoires côté backend si besoin
+        });
+        ToastAndroid.show('Avis créé avec succès', ToastAndroid.SHORT);
+      }
+      await loadBookings();
+    } catch (error) {
+      ToastAndroid.show('Erreur lors de la soumission de l’avis', ToastAndroid.SHORT);
+      console.error(error);
+    }
   };
 
-  // Menu client
   const customerMenuItems = ['Accueil', 'Mes réservations', 'Mon profil', 'Paramètres', 'Déconnexion'];
   const handleMenuItemPress = (item: string) => {
     switch (item) {
@@ -199,7 +192,7 @@ export default function BookingList() {
 
       <View style={styles.filterContainer}>
         <AppText style={styles.filterLabel}>Filtre:</AppText>
-        {['Tous', 'Terminé', 'En cours', 'Annulé'].map(status => (
+        {['Tous', 'Terminé', 'Confirmé', 'Annulé'].map(status => (
           <TouchableOpacity
             key={status}
             style={[styles.filterButton, statusFilter === status && styles.activeFilterButton]}
@@ -218,8 +211,8 @@ export default function BookingList() {
             <BookingCard
               key={booking.id}
               title={booking.serviceTitle}
-              date={formatDate(booking.dateBooking)}
-              time={formatTime(booking.dateBooking)}
+              dateSchedule={booking.dateSchedule}
+              timeSchedule={booking.timeSchedule}
               price={booking.totalPrice}
               status={translateStatus(booking.status)}
               address={booking.providerAddress}
@@ -229,6 +222,7 @@ export default function BookingList() {
               rating={booking.review?.rating}
               review={booking.review?.comment}
               reviewDate={booking.review?.dateComment}
+              reviewId={booking.review?.id}
               role="Client"
               onPressConfirm={() => handleConfirm(booking.paymentId)}
               onPressCancel={() => handleCancel(booking.id)}
@@ -246,15 +240,25 @@ export default function BookingList() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   filterContainer: {
-    flexDirection: 'row', alignItems: 'center',
-    marginHorizontal: 16, marginTop: 20, marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 20,
   },
   filterLabel: {
-    fontSize: 16, marginLeft: 5, marginRight: 8, fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 5,
+    marginRight: 8,
+    fontWeight: 'bold',
   },
   filterButton: {
-    borderWidth: 1, borderColor: '#a478dd', borderRadius: 20,
-    paddingVertical: 4, paddingHorizontal: 12, marginHorizontal: 2,
+    borderWidth: 1,
+    borderColor: '#a478dd',
+    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    marginHorizontal: 2,
   },
   filterButtonText: {
     color: '#a478dd',

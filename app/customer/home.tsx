@@ -22,19 +22,16 @@ interface Provider {
 export default function CustomerHomeScreen() {
   const { currentUser } = useAuth();
 
-  // -- State --
   const [allProviders, setAllProviders] = useState<Provider[]>([]);
   const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filtres front
   const [search, setSearch] = useState('');
   const [location, setLocation] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
 
   const router = useRouter();
 
-  // 1️⃣ Récupère tous les providers une seule fois
   useEffect(() => {
     const fetchProviders = async () => {
       try {
@@ -46,13 +43,13 @@ export default function CustomerHomeScreen() {
           if (matches && matches.length) {
             try {
               data = JSON.parse(matches[0]);
-            } catch  {
+            } catch {
               data = [];
             }
           } else {
             try {
               data = JSON.parse(data);
-            } catch  {
+            } catch {
               data = [];
             }
           }
@@ -60,7 +57,7 @@ export default function CustomerHomeScreen() {
 
         setAllProviders(Array.isArray(data) ? data : []);
         setFilteredProviders(Array.isArray(data) ? data : []);
-      } catch  {
+      } catch {
         Toast.show({
           type: 'error',
           text1: 'Erreur',
@@ -74,11 +71,9 @@ export default function CustomerHomeScreen() {
     fetchProviders();
   }, []);
 
-  // 2️⃣ Filtrage local dès que search/categories/location changent
   useEffect(() => {
     let result = allProviders;
 
-    // 🔍 Recherche mot-clé sur nom, prénom, adresse, catégories
     if (search) {
       const searchLC = search.toLowerCase();
       result = result.filter(provider => {
@@ -92,7 +87,6 @@ export default function CustomerHomeScreen() {
       });
     }
 
-    // 🔍 Filtre LIEU uniquement (précis ou partiel)
     if (location) {
       const locLC = location.toLowerCase();
       result = result.filter(provider =>
@@ -100,7 +94,6 @@ export default function CustomerHomeScreen() {
       );
     }
 
-    // 🔍 Filtre par CATEGORIES (OR multiple)
     if (categories.length > 0) {
       result = result.filter(provider =>
         categories.some(cat =>
@@ -112,7 +105,6 @@ export default function CustomerHomeScreen() {
     setFilteredProviders(result);
   }, [search, categories, location, allProviders]);
 
-  // Navigation vers profil
   const handleGoToProfile = (providerId: number) => {
     router.push(`/profile-provider?providerId=${providerId}`);
   };
@@ -153,16 +145,11 @@ export default function CustomerHomeScreen() {
       </SafeAreaView>
     );
   }
-// 🐛 DEBUG LOG
-console.log("filteredProviders", filteredProviders);
-console.log("categories", categories);
-console.log("location", location);
-console.log("search", search);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <HeaderGradient
-        title={`Bienvenue ${currentUser?.name ?? 'Utilisateur'},`}
+        title={`Bienvenue, ${currentUser?.name || 'Client'} !`}
         subtitle="Trouvez votre Make up Artist !"
         avatarUri={getDefaultAvatar('CLIENT')}
         showMenu={true}
@@ -175,7 +162,6 @@ console.log("search", search);
         locationQuery={location}
         onChangeLocation={setLocation}
         onCategorySelect={setCategories}
-        // showCategoryButton={true} // true par défaut
       />
 
       <View style={{ backgroundColor: 'white', padding: 15 }}>

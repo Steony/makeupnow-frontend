@@ -1,35 +1,18 @@
 import AppText from '@/components/ui/AppText';
 import Footer from '@/components/ui/Footer';
 import HeaderGradient from '@/components/ui/HeaderGradient';
-import { api } from '@/config/api';
-
-
+import { useAuth } from '@/utils/AuthContext';
 import { handleLogout } from '@/utils/authService';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Image, SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function HomeProviderScreen() {
-  const [userFirstname, setUserFirstname] = useState('Provider');
-  
+  const { currentUser } = useAuth();
   const router = useRouter();
 
   // ✅ Avatar statique pour le Provider
   const providerAvatar = require('@/assets/images/avatarprovider.png');
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const response = await api.get('/users/me');
-        const { firstname } = response.data;
-        setUserFirstname(firstname ?? 'Provider');
-      } catch (error) {
-        console.error('Erreur lors de la récupération du profil :', error);
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
 
   const providerMenuItems = ['Mon dashboard', 'Mes prestations', 'Mon planning', 'Paramètres', 'Déconnexion'];
 
@@ -58,7 +41,7 @@ export default function HomeProviderScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <HeaderGradient
-        title={`Bienvenue, ${userFirstname} !`}
+        title={`Bienvenue, ${currentUser?.name || 'Provider'} !`}
         subtitle="Votre art, votre planning, votre succès !"
         avatarUri={providerAvatar} // ✅ Avatar fixe pour Provider
         showMenu={true}
@@ -66,40 +49,40 @@ export default function HomeProviderScreen() {
         menuItems={providerMenuItems}
         onMenuItemPress={handleMenuItemPress}
       />
- <View style={{ flex: 1, justifyContent: 'space-between' }}>
-      <View style={styles.profileContainer}>
-        <View style={styles.rowButtonsContainer}>
-          <View style={styles.buttonBlock}>
-            <TouchableOpacity onPress={() => router.push('/provider/planning')}>
+
+      <View style={{ flex: 1, justifyContent: 'space-between' }}>
+        <View style={styles.profileContainer}>
+          <View style={styles.rowButtonsContainer}>
+            <View style={styles.buttonBlock}>
+              <TouchableOpacity onPress={() => router.push('/provider/planning')}>
+                <Image
+                  source={require('@/assets/images/bookingcustomer.png')}
+                  style={styles.buttonIcon}
+                />
+              </TouchableOpacity>
+              <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Mon planning</AppText>
+            </View>
+
+            <View style={styles.buttonBlock}>
+              <TouchableOpacity onPress={() => router.push('/provider/services')}>
+                <Image
+                  source={require('@/assets/images/brush.png')}
+                  style={styles.buttonIcon}
+                />
+              </TouchableOpacity>
+              <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Mes prestations</AppText>
+            </View>
+          </View>
+
+          <View style={[styles.buttonBlock, styles.centeredButton]}>
+            <TouchableOpacity onPress={() => router.push('/settings')}>
               <Image
-                source={require('@/assets/images/bookingcustomer.png')}
+                source={require('@/assets/images/setting.png')}
                 style={styles.buttonIcon}
               />
             </TouchableOpacity>
-            <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Mon planning</AppText>
+            <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Paramètres</AppText>
           </View>
-
-          <View style={styles.buttonBlock}>
-            <TouchableOpacity onPress={() => router.push('/provider/services')}>
-              <Image
-                source={require('@/assets/images/brush.png')}
-                style={styles.buttonIcon}
-              />
-            </TouchableOpacity>
-            <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Mes prestations</AppText>
-          </View>
-        </View>
-
-        <View style={[styles.buttonBlock, styles.centeredButton]}>
-          <TouchableOpacity onPress={() => router.push('/settings')}>
-            <Image
-              source={require('@/assets/images/setting.png')}
-              style={styles.buttonIcon}
-            />
-          </TouchableOpacity>
-          <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Paramètres</AppText>
-        </View>
-        
         </View>
         <Footer />
       </View>

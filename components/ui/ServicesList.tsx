@@ -11,7 +11,7 @@ export interface MakeupService {
   price: number;
   categoryTitle: string;
   description: string;
-  duration: number;
+  duration: number; // durée en minutes
 }
 
 interface ServicesListProps {
@@ -23,6 +23,14 @@ interface ServicesListProps {
 const ServicesList: React.FC<ServicesListProps> = ({ services, onEdit, refreshServices }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<number | null>(null);
+
+  // Formate la durée en "XhYY" (ex: 1h30)
+  const formatDuration = (durationInMinutes: number) => {
+    const hours = Math.floor(durationInMinutes / 60);
+    const minutes = durationInMinutes % 60;
+    const minutesFormatted = minutes < 10 ? `0${minutes}` : minutes;
+    return `${hours}h${minutesFormatted}`;
+  };
 
   // Ouvre le modal de confirmation
   const askDelete = (serviceId: number) => {
@@ -72,7 +80,7 @@ const ServicesList: React.FC<ServicesListProps> = ({ services, onEdit, refreshSe
             <View style={styles.rowBetween}>
               <View style={styles.row}>
                 <Ionicons name="time-outline" size={16} color="#8a2be2" />
-                <Text style={styles.duration}> {item.duration / 60}h</Text>
+                <Text style={styles.duration}> {formatDuration(item.duration)}</Text>
               </View>
               <View style={styles.row}>
                 <TouchableOpacity style={styles.button} onPress={() => onEdit(item.id)}>

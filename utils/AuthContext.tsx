@@ -33,14 +33,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   if (token) {
     try {
       const decoded: any = jwtDecode(token);
-      console.log('Decoded JWT:', decoded);  // <-- ajoute ça pour debugger
-      setCurrentUser({
-        id: decoded.id,
-        email: decoded.sub,
-        role: decoded.role,
-        avatar: decoded.avatar,
-        name: decoded.firstname || decoded.given_name || decoded.name ||  'Utilisateur',
+      console.log('Decoded JWT:', decoded);
 
+      // Normaliser rôle : retirer "ROLE_" si présent
+      const roleRaw = decoded.role || 'CLIENT';
+      const roleNormalized = roleRaw.startsWith('ROLE_') ? roleRaw.substring(5) : roleRaw;
+
+      setCurrentUser({
+        id: decoded.id.toString(),
+        email: decoded.sub,
+        role: roleNormalized.toUpperCase(),
+        avatar: decoded.avatar,
+        name: decoded.firstname || decoded.given_name || decoded.name || 'Utilisateur',
       });
     } catch (e) {
       console.error('Erreur décodage JWT', e);
@@ -50,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(null);
   }
 }, []);
+
 
 
   useEffect(() => {

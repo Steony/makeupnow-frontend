@@ -1,38 +1,31 @@
 import React, { useState } from 'react';
-import {
-  Image,
-  StyleSheet,
-  TextInput,
-  TextInputProps,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, StyleSheet, TextInput, TextInputProps, TouchableOpacity, View } from 'react-native';
 
 interface CustomInputProps extends TextInputProps {
   icon: any;
   placeholder: string;
-  value: string;
+  value?: string;
   onChangeText: (text: string) => void;
   secureTextEntry?: boolean;
   showEyeIcon?: boolean;
+  editable?: boolean;
   keyboardType?: TextInputProps['keyboardType'];
 }
 
 export default function CustomInput({
   icon,
   placeholder,
-  value,
+  value = '',
   onChangeText,
   secureTextEntry = false,
   showEyeIcon = false,
   keyboardType = 'default',
+  editable = true,
   ...rest
 }: CustomInputProps) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-  const togglePasswordVisibility = () => {
-    setIsPasswordVisible(!isPasswordVisible);
-  };
+  const togglePasswordVisibility = () => setIsPasswordVisible((prev) => !prev);
 
   return (
     <View style={styles.inputContainer}>
@@ -45,6 +38,7 @@ export default function CustomInput({
         onChangeText={onChangeText}
         secureTextEntry={secureTextEntry && !isPasswordVisible}
         keyboardType={keyboardType}
+        editable={editable}
         {...rest}
       />
       {showEyeIcon && (
@@ -89,6 +83,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 15,
     color: '#371B34',
-    fontFamily: 'Inter_400Regular', // ✅ Police cohérente
+    fontFamily: 'Inter_400Regular',
   },
 });
