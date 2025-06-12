@@ -46,7 +46,7 @@ export default function HomeAdminScreen() {
     <SafeAreaView style={styles.container}>
       <HeaderGradient
         title={`Bienvenue, ${currentUser?.name || 'Admin'} !`}
-        subtitle="Administrez vos utilisateurs et réservations"
+        subtitle="Administrez vos utilisateurs "
         avatarUri={adminAvatar}
         showMenu={true}
         showSearch={false}
@@ -121,6 +121,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     alignSelf: 'center',
   },
-  buttonIcon: { width: 150, height: 150, borderRadius: 15 },
-  buttonLabel: { marginTop: 10, fontSize: 17, fontWeight: 'bold', color: '#000' },
+  buttonIcon: { width: 140, height: 140, borderRadius: 15, alignItems:'center' },
+  buttonLabel: { marginTop: 10, fontSize: 15, fontWeight: 'bold', color: '#000' },
 });
