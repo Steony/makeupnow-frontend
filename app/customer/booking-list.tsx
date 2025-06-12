@@ -8,14 +8,13 @@ import { handleLogout } from '@/utils/authService';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   SafeAreaView,
   ScrollView,
   StyleSheet,
-  ToastAndroid,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function BookingList() {
   const router = useRouter();
@@ -26,6 +25,16 @@ export default function BookingList() {
   const [statusFilter, setStatusFilter] = useState('Tous');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    Toast.show({
+      type,
+      text1: message,
+      position: 'bottom',
+      visibilityTime: 2000,
+    });
+  };
+
+  // CHARGER LES RÉSERVATIONS DU CLIENT
   const loadBookings = async () => {
     if (!currentUser?.id) return;
     try {
@@ -33,9 +42,7 @@ export default function BookingList() {
       let data = response.data;
 
       if (typeof data === 'string') {
-        // Essayer de parser de manière sécurisée
         try {
-          // Gérer cas avec concaténation de tableaux JSON : "[...][...]"
           if (data.startsWith('[') && data.includes('][')) {
             const parts = data.split('][');
             data = parts[0] + ']';
@@ -44,7 +51,7 @@ export default function BookingList() {
           data = JSON.parse(data);
         } catch (parseError) {
           console.error('Erreur lors du parsing JSON:', parseError, data);
-          ToastAndroid.show('Erreur dans les données reçues du serveur', ToastAndroid.SHORT);
+          showToast('Erreur dans les données reçues du serveur', 'error');
           return;
         }
       }
@@ -54,15 +61,17 @@ export default function BookingList() {
           data = data.map(item => JSON.parse(item));
         } catch (e) {
           console.error('Erreur parse array JSON:', e);
-          ToastAndroid.show('Erreur dans les données reçues du serveur', ToastAndroid.SHORT);
+          showToast('Erreur dans les données reçues du serveur', 'error');
           return;
         }
       }
 
+      console.log('BOOKINGS_REÇUS:', data); // 👈 Ajoute ce log pour debug
+
       setBookings(data);
     } catch (error) {
       console.error('Erreur récupération réservations :', error);
-      ToastAndroid.show('Erreur lors du chargement des réservations', ToastAndroid.SHORT);
+      showToast('Erreur lors du chargement des réservations', 'error');
     }
   };
 
@@ -72,97 +81,119 @@ export default function BookingList() {
 
   const translateStatus = (status: string) => {
     switch (status) {
-      case 'CONFIRMED': return 'Confirmée';
-      case 'COMPLETED': return 'Terminée et payée';
-      case 'CANCELLED': return 'Annulée';
+      case 'CONFIRMED': return 'Confirmé';
+      case 'COMPLETED': return 'Terminé et payé';
+      case 'CANCELLED': return 'Annulé';
       default: return status;
     }
   };
 
+  // On s'assure de fallback sur tous les cas possibles
+  const getServiceTitle = (booking: any) =>
+    booking.serviceTitle ??
+    booking.service?.title ??
+    '';
+
+  const getProviderName = (booking: any) =>
+    booking.providerName ??
+    (booking.provider ? (booking.provider.firstname + ' ' + booking.provider.lastname) : '') ??
+    '';
+
+  const getProviderEmail = (booking: any) =>
+    booking.providerEmail ??
+    booking.provider?.email ??
+    '';
+
+  const getProviderPhone = (booking: any) =>
+    booking.providerPhone ??
+    booking.provider?.phoneNumber ??
+    '';
+
+  const getProviderAddress = (booking: any) =>
+    booking.providerAddress ??
+    booking.provider?.address ??
+    '';
+
+  const getServiceDuration = (booking: any) =>
+    booking.serviceDuration ??
+    booking.service?.duration?.toString() ??
+    '';
+
+  const getDateSchedule = (booking: any) =>
+    booking.dateSchedule ??
+    booking.schedule?.startTime?.split('T')[0] ??
+    '';
+
+  const getTimeSchedule = (booking: any) =>
+    booking.timeSchedule ??
+    (booking.schedule?.startTime ? booking.schedule?.startTime.split('T')[1]?.substring(0, 5) : '') ??
+    '';
+
   const filteredBookings = bookings.filter((booking) => {
-    const matchesSearch = booking.serviceTitle?.toLowerCase().includes(searchQuery.toLowerCase());
+    const serviceTitle = getServiceTitle(booking).toLowerCase();
+    const matchesSearch = serviceTitle.includes(searchQuery.toLowerCase());
     const matchesStatus =
       statusFilter === 'Tous' ||
-      (statusFilter === 'Confirmée' && booking.status === 'CONFIRMED') ||
+      (statusFilter === 'Confirmé' && booking.status === 'CONFIRMED') ||
       (statusFilter === 'Annulé' && booking.status === 'CANCELLED') ||
       (statusFilter === 'Terminé' && booking.status === 'COMPLETED');
 
     const matchesCategory =
       selectedCategories.length === 0 ||
       selectedCategories.some(cat =>
-        booking.serviceTitle?.toLowerCase().includes(cat.toLowerCase())
+        serviceTitle.includes(cat.toLowerCase())
       );
 
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  const handleConfirm = (paymentId: number) => {
-    if (!currentUser?.id) {
-      ToastAndroid.show('Erreur : utilisateur non connecté', ToastAndroid.SHORT);
-      return;
+  // Annulation de réservation
+  const handleCancel = async (bookingId: number) => {
+    try {
+      await api.put(`/bookings/${bookingId}/cancel`);
+      showToast('Réservation annulée ✅');
+      await loadBookings();
+    } catch (err: any) {
+      showToast('Erreur d’annulation', 'error');
+      console.log('Erreur d’annulation =', err?.response ?? err);
     }
-
-    Alert.alert('Confirmation', 'Confirmer le paiement ?', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Oui',
-        onPress: async () => {
-          try {
-            const response = await api.post('/payments/confirm/customer', null, {
-              params: { paymentId, customerId: currentUser.id },
-            });
-            if (response.data) {
-              ToastAndroid.show('Paiement confirmé ✅', ToastAndroid.SHORT);
-              await loadBookings();
-            }
-          } catch {
-            ToastAndroid.show('Erreur de confirmation', ToastAndroid.SHORT);
-          }
-        },
-      },
-    ]);
   };
 
-  const handleCancel = (bookingId: number) => {
-    Alert.alert('Confirmation', 'Annuler la réservation ?', [
-      { text: 'Non', style: 'cancel' },
-      {
-        text: 'Oui',
-        onPress: async () => {
-          try {
-            await api.delete(`/bookings/${bookingId}`);
-            ToastAndroid.show('Réservation annulée ✅', ToastAndroid.SHORT);
-            setBookings(prev => prev.filter(b => b.id !== bookingId));
-          } catch {
-            ToastAndroid.show('Erreur d’annulation', ToastAndroid.SHORT);
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleSubmitReview = async (rating: number, comment: string, reviewId?: string | null) => {
+  // Soumission/édition d'avis
+  const handleSubmitReview = async (
+    rating: number,
+    comment: string,
+    reviewId?: string | null,
+    booking?: any
+  ) => {
     try {
       if (!currentUser?.id) throw new Error('Utilisateur non connecté');
+      if (!booking) throw new Error('Booking non fourni');
+
+      const reviewPayload = {
+        rating,
+        comment,
+        customerId: currentUser.id,
+        providerId: booking.providerId ?? booking.provider?.id,
+        makeupServiceId: booking.serviceId ?? booking.service?.id,
+        bookingId: booking.id, // 👈
+      };
+
       if (reviewId) {
         await api.put(`/reviews/${reviewId}`, { rating, comment });
-        ToastAndroid.show('Avis modifié avec succès', ToastAndroid.SHORT);
+        showToast('Avis modifié avec succès');
       } else {
-        await api.post('/reviews', {
-          rating,
-          comment,
-          customerId: currentUser.id,
-          // ajouter les autres champs obligatoires côté backend si besoin
-        });
-        ToastAndroid.show('Avis créé avec succès', ToastAndroid.SHORT);
+        await api.post('/reviews', reviewPayload);
+        showToast('Avis créé avec succès');
       }
       await loadBookings();
     } catch (error) {
-      ToastAndroid.show('Erreur lors de la soumission de l’avis', ToastAndroid.SHORT);
+      showToast('Erreur lors de la soumission de l’avis', 'error');
       console.error(error);
     }
   };
 
+  // MENU CLIENT UNIQUEMENT
   const customerMenuItems = ['Accueil', 'Mes réservations', 'Mon profil', 'Paramètres', 'Déconnexion'];
   const handleMenuItemPress = (item: string) => {
     switch (item) {
@@ -171,7 +202,7 @@ export default function BookingList() {
       case 'Mon profil': router.push('/customer/profile'); break;
       case 'Paramètres': router.push('/settings'); break;
       case 'Déconnexion': handleLogout(); break;
-      default: console.log('Action inconnue');
+      default: break;
     }
   };
 
@@ -209,24 +240,26 @@ export default function BookingList() {
         <View style={styles.bookingList}>
           {filteredBookings.map(booking => (
             <BookingCard
-              key={booking.id}
-              title={booking.serviceTitle}
-              dateSchedule={booking.dateSchedule}
-              timeSchedule={booking.timeSchedule}
-              price={booking.totalPrice}
-              status={translateStatus(booking.status)}
-              address={booking.providerAddress}
-              providerName={booking.providerName}
-              providerEmail={booking.providerEmail}
-              providerPhone={booking.providerPhone}
+              key={booking.id + '-' + (booking.review?.id || 'noreview')}
+              title={getServiceTitle(booking)}
+              dateSchedule={getDateSchedule(booking)}
+              timeSchedule={getTimeSchedule(booking)}
+              price={booking.totalPrice ?? booking.price ?? 0}
+              status={translateStatus(booking.status ?? '')}
+              address={getProviderAddress(booking)}
+              providerName={getProviderName(booking)}
+              providerEmail={getProviderEmail(booking)}
+              providerPhone={getProviderPhone(booking)}
               rating={booking.review?.rating}
               review={booking.review?.comment}
               reviewDate={booking.review?.dateComment}
               reviewId={booking.review?.id}
+              duration={parseInt(getServiceDuration(booking), 10) || 0}
               role="Client"
-              onPressConfirm={() => handleConfirm(booking.paymentId)}
               onPressCancel={() => handleCancel(booking.id)}
-              onSubmitReview={handleSubmitReview}
+              onSubmitReview={(rating, comment, reviewId) =>
+                handleSubmitReview(rating, comment, reviewId, booking)
+              }
             />
           ))}
         </View>

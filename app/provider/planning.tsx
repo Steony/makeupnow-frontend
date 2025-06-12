@@ -24,24 +24,39 @@ type Slot = {
   endTime: string;
 };
 
+type Review = {
+  id: string;
+  rating: number;
+  comment: string;
+  dateComment: string;
+};
+
+type Booking = {
+  id: string;
+  serviceTitle: string;
+  dateSchedule: string;
+  timeSchedule: string;
+  totalPrice: number;
+  status: string;
+  customerAddress: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  review?: Review;
+  serviceDuration?: string;
+  startTime: string;
+  endTime: string;
+  paymentId?: number;
+};
+
 export default function PlanningScreen() {
   const router = useRouter();
   const { currentUser } = useAuth();
 
-  // Normaliser données (gère retour API)
-  const extractData = (data: any) => {
-    if (Array.isArray(data)) {
-      if (Array.isArray(data[0])) return data[0];
-      return data;
-    }
-    return [];
-  };
-
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [statusFilter, setStatusFilter] = useState('Tous');
   const [activeTab, setActiveTab] = useState<'Réservations' | 'Créneaux'>('Réservations');
-  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [dateSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Modal ajout/modif
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -52,15 +67,35 @@ export default function PlanningScreen() {
   const [slotToDelete, setSlotToDelete] = useState<Slot | null>(null);
 
   const providerAvatar = require('@/assets/images/avatarprovider.png');
+  const [statusFilter, setStatusFilter] = useState('Tous');
 
-  // Fonction pour recharger bookings et slots (useCallback pour éviter recréations)
+  // Rechargement bookings et slots
   const reloadData = useCallback(() => {
     if (!currentUser?.id) return;
 
     const fetchBookings = async () => {
       try {
         const res = await api.get(`/bookings/provider/${currentUser.id}`);
-        setBookings(extractData(res.data));
+        let data = res.data;
+
+        if (typeof data === 'string') {
+          // Gère les retours string/json foireux du backend
+          const matches = data.match(/\[.*?\]/g);
+          if (matches && matches.length) {
+            let arr: any[] = [];
+            matches.forEach((str) => {
+              try { arr = arr.concat(JSON.parse(str)); } catch {}
+            });
+            data = arr;
+          } else {
+            try { data = JSON.parse(data); } catch { data = []; }
+          }
+        }
+        if (Array.isArray(data) && Array.isArray(data[0])) {
+          data = data.flat();
+        }
+        if (!Array.isArray(data)) data = [];
+        setBookings(data);
       } catch (e) {
         console.error('Erreur chargement réservations', e);
         Toast.show({ type: 'error', text1: 'Erreur', text2: 'Impossible de charger les réservations' });
@@ -72,7 +107,6 @@ export default function PlanningScreen() {
       try {
         const res = await api.get(`/schedules/provider/${currentUser.id}`);
         let data = res.data;
-
         if (typeof data === 'string') {
           if (data.startsWith('[') && data.includes('][')) {
             const parts = data.split('][');
@@ -83,13 +117,10 @@ export default function PlanningScreen() {
             data = JSON.parse(data);
           }
         }
-
         if (!Array.isArray(data)) {
-          console.error('Les créneaux ne sont pas un tableau', data);
           setSlots([]);
           return;
         }
-
         setSlots(data);
       } catch (e) {
         console.error('Erreur chargement créneaux', e);
@@ -102,11 +133,9 @@ export default function PlanningScreen() {
     fetchSlots();
   }, [currentUser]);
 
-  useEffect(() => {
-    reloadData();
-  }, [reloadData]);
+  useEffect(() => { reloadData(); }, [reloadData]);
 
-  // Supprimer doublons et trier
+  // Slots triés et sans doublons
   const uniqueSlots = slots.filter((slot, i, self) => i === self.findIndex(s => s.id === slot.id));
   const sortedSlots = uniqueSlots.sort((a, b) => {
     const aTime = new Date(a.startTime).getTime();
@@ -114,19 +143,19 @@ export default function PlanningScreen() {
     return dateSortOrder === 'asc' ? aTime - bTime : bTime - aTime;
   });
 
-  // Ouvrir modal ajout
+  // Modal ajout
   const openAddModal = () => {
     setEditingSlot(null);
     setIsModalVisible(true);
   };
 
-  // Ouvrir modal modif
+  // Modal modif
   const openEditModal = (slot: Slot) => {
     setEditingSlot(slot);
     setIsModalVisible(true);
   };
 
-  // Soumettre ajout ou modif
+  // Ajout ou modif slot
   const handleSubmitSlot = async (slotData: { date: string; startTime: string; endTime: string }) => {
     try {
       const { date, startTime, endTime } = slotData;
@@ -143,8 +172,6 @@ export default function PlanningScreen() {
 
       setIsModalVisible(false);
       setEditingSlot(null);
-
-      // Recharge la liste des créneaux
       reloadData();
     } catch (e) {
       console.error('Erreur sauvegarde créneau', e);
@@ -152,13 +179,21 @@ export default function PlanningScreen() {
     }
   };
 
-  // Ouvrir modal suppression
+  const translateStatus = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED': return 'Confirmé';
+      case 'COMPLETED': return 'Terminé et payé';
+      case 'CANCELLED': return 'Annulé';
+      default: return status;
+    }
+  };
+
+  // Modal suppression
   const openDeleteModal = (slot: Slot) => {
     setSlotToDelete(slot);
     setDeleteModalVisible(true);
   };
 
-  // Supprimer créneau confirmé
   const handleDeleteSlot = async () => {
     if (!slotToDelete) return;
     try {
@@ -166,8 +201,6 @@ export default function PlanningScreen() {
       Toast.show({ type: 'success', text1: 'Créneau supprimé avec succès !' });
       setDeleteModalVisible(false);
       setSlotToDelete(null);
-
-      // Recharge la liste des créneaux
       reloadData();
     } catch (e) {
       console.error('Erreur suppression créneau', e);
@@ -175,29 +208,24 @@ export default function PlanningScreen() {
     }
   };
 
-  // Confirmation paiement côté Provider
-  const handleConfirmPayment = async (paymentId: number) => {
-    if (!currentUser?.id) {
-      Toast.show({ type: 'error', text1: 'Erreur', text2: 'Utilisateur non connecté' });
+  // Paiement reçu côté Provider
+  const handleConfirmPayment = async (paymentId: number, providerId: number) => {
+    if (!paymentId || !providerId) {
+      Toast.show({ type: 'error', text1: 'Impossible de confirmer : infos manquantes' });
       return;
     }
-
     try {
       await api.post('/payments/confirm/provider', null, {
-        params: {
-          paymentId: paymentId,
-          providerId: currentUser.id,
-        },
+        params: { paymentId, providerId }
       });
       Toast.show({ type: 'success', text1: 'Paiement confirmé !' });
-      reloadData(); // Recharge réservations pour mise à jour après paiement confirmé
+      reloadData();
     } catch (error) {
       console.error('Erreur de confirmation paiement :', error);
       Toast.show({ type: 'error', text1: 'Erreur', text2: 'Impossible de confirmer le paiement' });
     }
   };
 
-  // Formatage date/heure
   const formatDate = (isoDate: string) => {
     const d = new Date(isoDate);
     return isNaN(d.getTime()) ? 'Date invalide' : d.toLocaleDateString('fr-FR');
@@ -220,7 +248,6 @@ export default function PlanningScreen() {
         <TouchableOpacity onPress={() => openEditModal(slot)} style={styles.editButton}>
           <AppText style={styles.editButtonText}>Modifier</AppText>
         </TouchableOpacity>
-
         <TouchableOpacity onPress={() => openDeleteModal(slot)} style={styles.deleteButton}>
           <AppText style={styles.deleteButtonText}>Supprimer</AppText>
         </TouchableOpacity>
@@ -238,9 +265,31 @@ export default function PlanningScreen() {
       case 'Mon planning': router.push('/provider/planning'); break;
       case 'Paramètres': router.push('/settings'); break;
       case 'Déconnexion': handleLogout(); break;
-      default: console.log('Aucune action définie');
+      default: break;
     }
   };
+
+  // Bookings sans doublon
+  const uniqueBookings = bookings.filter(
+    (booking, i, self) => i === self.findIndex(b => b.id === booking.id)
+  );
+
+  // Filtrage selon statusFilter
+  const filteredBookings = uniqueBookings.filter((booking) => {
+    if (statusFilter === 'Tous') return true;
+    if (statusFilter === 'Terminé') return booking.status === 'COMPLETED';
+    if (statusFilter === 'Confirmé') return booking.status === 'CONFIRMED';
+    if (statusFilter === 'Annulé') return booking.status === 'CANCELLED';
+    return true;
+  });
+
+  function getDurationInMinutes(start: string, end: string): number | undefined {
+    if (!start || !end) return undefined;
+    const s = new Date(start).getTime();
+    const e = new Date(end).getTime();
+    if (isNaN(s) || isNaN(e)) return undefined;
+    return Math.round((e - s) / 60000);
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -282,27 +331,55 @@ export default function PlanningScreen() {
       )}
 
       {activeTab === 'Réservations' && (
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          {bookings.map((booking) => (
-            <BookingCard
-              key={booking.id}
-              title={booking.serviceTitle}
-              date={formatDate(booking.dateBooking)}
-              time={formatTime(booking.dateBooking)}
-              price={booking.totalPrice}
-              status={booking.status}
-              address={booking.customerAddress}
-              providerName={booking.customerName}
-              providerEmail={booking.customerEmail}
-              providerPhone={booking.customerPhone}
-              rating={booking.review?.rating}
-              review={booking.review?.comment}
-              reviewDate={booking.review?.dateComment}
-              role="Provider"  // ou 'Client' ou 'Admin' selon contexte
-              onPressConfirm={() => handleConfirmPayment(booking.paymentId)}
-            />
-          ))}
-        </ScrollView>
+        <>
+          <View style={styles.filterContainer}>
+            <AppText style={styles.filterLabel}>Filtre:</AppText>
+            {['Tous', 'Terminé', 'Confirmé', 'Annulé'].map(status => (
+              <TouchableOpacity
+                key={status}
+                style={[styles.filterButton, statusFilter === status && styles.activeFilterButton]}
+                onPress={() => setStatusFilter(status)}
+              >
+                <AppText style={[styles.filterButtonText, statusFilter === status && styles.activeFilterButtonText]}>
+                  {status}
+                </AppText>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <ScrollView contentContainerStyle={styles.scrollContainer}>
+            {filteredBookings.map((booking) => {
+              console.log('DEBUG Booking:', booking, 'currentUser:', currentUser);
+              return (
+                <BookingCard
+                  key={booking.id + '-' + (booking.review?.id || 'noreview')}
+                  title={booking.serviceTitle}
+                  dateSchedule={booking.dateSchedule}
+                  timeSchedule={booking.timeSchedule}
+                  price={booking.totalPrice}
+                  status={translateStatus(booking.status)}
+                  address={booking.customerAddress}
+                  clientName={booking.customerName}
+                  clientEmail={booking.customerEmail}
+                  clientPhone={booking.customerPhone}
+                  rating={booking.review?.rating}
+                  review={booking.review?.comment}
+                  reviewDate={booking.review?.dateComment}
+                  reviewId={booking.review?.id}
+                  duration={parseInt(booking.serviceDuration || '', 10) || getDurationInMinutes(booking.startTime, booking.endTime)}
+                  role="Provider"
+                  paymentId={booking.paymentId}
+                  providerId={currentUser?.id ? Number(currentUser.id) : undefined}
+                  onPressConfirm={() =>
+                    booking.paymentId && currentUser?.id
+                      ? handleConfirmPayment(booking.paymentId, Number(currentUser.id))
+                      : Toast.show({ type: 'error', text1: 'Impossible de confirmer : infos manquantes' })
+                  }
+                />
+              );
+            })}
+          </ScrollView>
+        </>
       )}
 
       {activeTab === 'Créneaux' && (
@@ -362,8 +439,9 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#eee',
+    backgroundColor: '#fff',
     paddingVertical: 10,
+     marginBottom: 12,
   },
   tab: {
     paddingVertical: 8,
@@ -382,6 +460,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#a478dd',
   },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 10,
+  },
+  filterLabel: {
+    fontSize: 16,
+    marginRight: 8,
+    fontWeight: 'bold',
+  },
   filterButton: {
     borderWidth: 1,
     borderColor: '#a478dd',
@@ -389,11 +478,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 12,
     marginHorizontal: 2,
-    marginBottom: 10,
   },
   filterButtonText: {
     color: '#a478dd',
-    fontSize: 14,
+  },
+  activeFilterButton: {
+    backgroundColor: '#a478dd',
+  },
+  activeFilterButtonText: {
+    color: '#fff',
   },
   scrollContainer: {
     padding: 16,

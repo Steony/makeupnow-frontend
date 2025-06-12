@@ -4,10 +4,25 @@ import Toast from 'react-native-toast-message';
 import AppText from './AppText';
 import ReviewModal from './ReviewModal';
 
+function formatReviewDate(dateStr?: string) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d as any)) return dateStr ?? '';
+  return d
+    .toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    .replace(',', ' à');
+}
+
 interface BookingCardProps {
   title: string;
-  dateSchedule: string;  // ISO string yyyy-MM-dd
-  timeSchedule: string;  // ISO string HH:mm:ss
+  dateSchedule: string;
+  timeSchedule: string;
   price: number;
   status: string;
   address: string;
@@ -20,7 +35,10 @@ interface BookingCardProps {
   rating?: number;
   review?: string;
   reviewDate?: string;
-  reviewId?: string;  // id de la review (utile pour modifier)
+  reviewId?: string;
+  duration?: number;
+  paymentId?: number;   // <-- Ajout
+  providerId?: number;  // <-- Ajout
   role: 'Admin' | 'Client' | 'Provider';
   onPressConfirm?: () => void;
   onPressCancel?: () => void;
@@ -46,6 +64,9 @@ export default function BookingCard({
   review,
   reviewDate,
   reviewId,
+  duration,
+  paymentId,
+  providerId,
   role,
   onPressConfirm,
   onPressCancel,
@@ -54,37 +75,48 @@ export default function BookingCard({
   onSubmitReview,
 }: BookingCardProps) {
   const statusColor =
-    status === 'Confirmée' ? '#6A0DAD' :
-    status === 'Terminée et payée' ? '#4CAF50' : '#000';
+    status === 'Confirmé' ? '#6A0DAD' :
+    status === 'Terminé et payé' ? '#4CAF50' : '#000';
 
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [modifyPaymentModalVisible, setModifyPaymentModalVisible] = useState(false);
-  const [deleteReviewModalVisible, setDeleteReviewModalVisible] = useState(false);
-
-  // Id de la review en édition (null = création)
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
-  const showToast = (message: string) => {
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     Toast.show({
-      type: 'success',
+      type,
       text1: message,
       position: 'bottom',
       visibilityTime: 2000,
     });
   };
 
-  const handleConfirmAction = () => {
-    onPressConfirm && onPressConfirm();
-    showToast('Paiement confirmé avec succès !');
-    setConfirmModalVisible(false);
+  
+
+  // Texte de confirmation selon le rôle
+  const getConfirmModalText = () => {
+    if (role === 'Provider') {
+      return 'Êtes-vous sûr de vouloir indiquer que le paiement a bien été reçu pour cette prestation ?';
+    }
+    return 'Êtes-vous sûr de vouloir confirmer le paiement ?';
   };
 
-  const handleCancelAction = () => {
-    onPressCancel && onPressCancel();
-    showToast('Réservation annulée !');
+  // Gestion du clic sur le bouton de confirmation (adapté Provider)
+  const handleConfirmAction = async () => {
+  if (onPressConfirm) {
+    await onPressConfirm();
+  }
+  setConfirmModalVisible(false);
+};
+
+
+  const handleCancelAction = async () => {
+    if (onPressCancel) {
+      await onPressCancel();
+    }
     setCancelModalVisible(false);
   };
 
@@ -94,21 +126,18 @@ export default function BookingCard({
     setModifyPaymentModalVisible(false);
   };
 
-  // Ouvre modal en mode création d'avis
   const handleOpenReviewModalForCreate = () => {
     setEditingReviewId(null);
     setIsEditingReview(false);
     setShowReviewModal(true);
   };
 
-  // Ouvre modal en mode modification d'avis
   const handleOpenReviewModalForEdit = () => {
     setEditingReviewId(reviewId ?? null);
     setIsEditingReview(true);
     setShowReviewModal(true);
   };
 
-  // Soumission du review (create ou update selon editingReviewId)
   const handleSubmitReview = (ratingValue: number, commentValue: string) => {
     onSubmitReview && onSubmitReview(ratingValue, commentValue, editingReviewId ?? null);
     showToast('Avis soumis !');
@@ -116,7 +145,6 @@ export default function BookingCard({
     setIsEditingReview(false);
   };
 
-  // Format date au format dd/MM/yy
   const formatDateSchedule = (dateStr: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -126,11 +154,20 @@ export default function BookingCard({
     return `${day}/${month}/${year}`;
   };
 
-  // Format time au format HH:mm
   const formatTimeSchedule = (timeStr: string) => {
     if (!timeStr) return '';
     const date = new Date(`1970-01-01T${timeStr}Z`);
     return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getFormattedDuration = () => {
+    if (!duration) return '';
+    if (duration >= 60) {
+      const h = Math.floor(duration / 60);
+      const m = duration % 60;
+      return m === 0 ? `${h}h` : `${h}h${m}`;
+    }
+    return `${duration} min`;
   };
 
   const showProviderInfo = role === 'Client' || (role === 'Admin' && providerName);
@@ -138,6 +175,7 @@ export default function BookingCard({
 
   return (
     <View style={styles.card}>
+      {/* Modal d'avis */}
       <ReviewModal
         visible={showReviewModal}
         onClose={() => { setShowReviewModal(false); setIsEditingReview(false); }}
@@ -147,7 +185,7 @@ export default function BookingCard({
         modalTitle={isEditingReview ? 'Modifier votre avis' : 'Écrire un avis'}
       />
 
-      {/* Modal Modifier le paiement */}
+      {/* Modal Modifier le paiement (ADMIN seulement) */}
       <Modal transparent visible={modifyPaymentModalVisible} animationType="fade" onRequestClose={() => setModifyPaymentModalVisible(false)}>
         <View style={styles.overlay}>
           <View style={styles.modalContainer}>
@@ -171,12 +209,12 @@ export default function BookingCard({
         </View>
       </Modal>
 
-      {/* Modal confirmer paiement */}
+      {/* Modal confirmer paiement (texte selon rôle) */}
       <Modal transparent visible={confirmModalVisible} animationType="fade" onRequestClose={() => setConfirmModalVisible(false)}>
         <View style={styles.overlay}>
           <View style={styles.modalContainer}>
             <AppText style={styles.modalTitle}>Confirmation</AppText>
-            <AppText style={styles.modalText}>Êtes-vous sûr de vouloir confirmer le paiement ?</AppText>
+            <AppText style={styles.modalText}>{getConfirmModalText()}</AppText>
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setConfirmModalVisible(false)} style={styles.modalButton}>
                 <AppText style={styles.modalButtonText}>Annuler</AppText>
@@ -209,17 +247,26 @@ export default function BookingCard({
 
       {/* Infos réservation */}
       <View style={styles.header}>
-        <AppText style={styles.title}>{title}</AppText>
-        <View style={{ alignItems: 'flex-end' }}>
+        <View style={{ flex: 1 }}>
+          <AppText style={styles.title}>{title}</AppText>
+          <AppText style={styles.date}>
+            {formatDateSchedule(dateSchedule)} à {formatTimeSchedule(timeSchedule)}
+          </AppText>
+          {status === 'Annulé' && (
+            <AppText style={{ color: '#a478dd', fontWeight: 'bold', marginTop: 10 }}>
+              Cette réservation a été annulée.
+            </AppText>
+          )}
+        </View>
+        <View style={{ alignItems: 'flex-end', marginLeft: 10 }}>
           <AppText style={[styles.status, { color: statusColor }]}>{status}</AppText>
           <AppText style={styles.price}>{price}€</AppText>
         </View>
       </View>
 
-      <AppText style={styles.date}>{formatDateSchedule(dateSchedule)} à {formatTimeSchedule(timeSchedule)}</AppText>
       <View style={styles.row}>
         <Image source={require('../../assets/images/clock.png')} style={styles.icon} />
-        <AppText style={styles.duration}>2h</AppText>
+        <AppText style={styles.duration}>{getFormattedDuration()}</AppText>
       </View>
 
       <View style={styles.row}>
@@ -250,32 +297,29 @@ export default function BookingCard({
 
       {rating !== undefined && review ? (
         <View style={styles.reviewSection}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-            <Image source={require('../../assets/images/starbooking.png')} style={styles.starIcon} />
-            <AppText style={styles.reviewLabel}>Note <AppText style={styles.bold}>{rating}/5</AppText></AppText>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={require('../../assets/images/starbooking.png')} style={styles.starIcon} />
+              <AppText style={styles.reviewLabel}>
+                Note <AppText style={styles.bold}>{rating}/5</AppText>
+              </AppText>
+            </View>
+            <AppText style={styles.reviewDateTop}>{formatReviewDate(reviewDate)}</AppText>
           </View>
-          <AppText style={styles.reviewDate}>{reviewDate}</AppText>
           <AppText style={styles.reviewText}>{review}</AppText>
-
           {(role === 'Client' || role === 'Admin') && (
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-              {/* Modifier l'avis */}
-              <TouchableOpacity onPress={handleOpenReviewModalForEdit} style={[styles.confirmButton, { paddingVertical: 6, paddingHorizontal: 12 }]}>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 1 }}>
+              <TouchableOpacity
+                onPress={handleOpenReviewModalForEdit}
+                style={[styles.confirmButton, { paddingVertical: 6, paddingHorizontal: 12 }]}
+              >
                 <AppText style={styles.buttonText}>Modifier l’avis</AppText>
               </TouchableOpacity>
-
-              {/* Supprimer l'avis uniquement Admin */}
-              {role === 'Admin' && (
-                <TouchableOpacity onPress={() => setDeleteReviewModalVisible(true)} style={styles.cancelButton}>
-                  <AppText style={styles.buttonText}>Supprimer l’avis</AppText>
-                </TouchableOpacity>
-              )}
             </View>
           )}
         </View>
       ) : (
-        // Pas d'avis : bouton pour écrire un avis (uniquement client)
-        role === 'Client' && (
+        role === 'Client' && status !== 'Annulé' && (
           <TouchableOpacity
             onPress={handleOpenReviewModalForCreate}
             style={[styles.writeReviewButton, { marginTop: 10 }]}
@@ -286,14 +330,11 @@ export default function BookingCard({
       )}
 
       {/* Boutons principaux selon rôle */}
-
       {role === 'Admin' && (
         <View style={styles.buttonRow}>
-          {status === 'Confirmée' && (
-            <TouchableOpacity style={styles.confirmButton} onPress={() => setConfirmModalVisible(true)}>
-              <AppText style={styles.buttonText}>Confirmer le paiement</AppText>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.confirmButton} onPress={() => setConfirmModalVisible(true)}>
+            <AppText style={styles.buttonText}>Confirmer le paiement</AppText>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.confirmButton} onPress={() => setModifyPaymentModalVisible(true)}>
             <AppText style={styles.buttonText}>Modifier le paiement</AppText>
           </TouchableOpacity>
@@ -303,25 +344,20 @@ export default function BookingCard({
         </View>
       )}
 
-      {role === 'Client' && (
+      {role === 'Client' && status !== 'Annulé' && (
         <View style={styles.buttonRow}>
-          {status === 'Confirmée' && (
-            <TouchableOpacity style={styles.confirmButton} onPress={() => setConfirmModalVisible(true)}>
-              <AppText style={styles.buttonText}>Confirmer le paiement</AppText>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity style={styles.cancelButton} onPress={() => setCancelModalVisible(true)}>
             <AppText style={styles.buttonText}>Annuler la réservation</AppText>
           </TouchableOpacity>
         </View>
       )}
 
-      {role === 'Provider' && status === 'Confirmée' && (
-        <TouchableOpacity style={styles.confirmButton} onPress={() => setConfirmModalVisible(true)}>
-          <AppText style={styles.buttonText}>Confirmer le paiement</AppText>
-        </TouchableOpacity>
-      )}
-
+      {/* PROVIDER → "Paiement reçu" */}
+      {role === 'Provider' && status === 'Confirmé' && (
+  <TouchableOpacity style={styles.confirmButton} onPress={() => setConfirmModalVisible(true)}>
+    <AppText style={styles.buttonText}>Paiement reçu</AppText>
+  </TouchableOpacity>
+)}
     </View>
   );
 }
@@ -346,7 +382,7 @@ const styles = StyleSheet.create({
   title: { fontWeight: 'bold', fontSize: 17, color: '#000' },
   status: { fontWeight: 'bold', fontSize: 17 },
   price: { fontWeight: 'bold', fontSize: 18, color: '#000', marginTop: 10, marginRight: 15 },
-  date: { fontSize: 15, marginVertical: 7, color: '#000', marginTop: -19 },
+  date: { fontSize: 15, color: '#000', marginTop: 2, marginBottom: 0 },
   row: { flexDirection: 'row', alignItems: 'center', marginVertical: 1 },
   icon: { width: 28, height: 28, marginRight: 4 },
   address: { fontSize: 16, color: '#000' },
@@ -361,8 +397,12 @@ const styles = StyleSheet.create({
   starIcon: { width: 20, height: 20, marginRight: 6 },
   bold: { fontWeight: 'bold' },
   reviewDate: { fontSize: 14, color: '#000', marginVertical: 4, marginBottom: 6 },
-  reviewText: { fontSize: 14, color: '#000', marginBottom: 6 },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  reviewText: { fontSize: 14, color: '#000', fontWeight: 'bold', marginTop: 8 },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
+  },
   confirmButton: {
     backgroundColor: '#a478dd',
     borderRadius: 5,
@@ -413,5 +453,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 5,
     backgroundColor: '#a478dd',
+  },
+  reviewDateTop: {
+    fontSize: 13,
+    color: '#888',
+    fontWeight: 'normal',
+    marginLeft: 8,
+    alignSelf: 'flex-start',
   },
 });
