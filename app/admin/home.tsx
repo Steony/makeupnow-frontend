@@ -15,7 +15,6 @@ export default function HomeAdminScreen() {
   const adminMenuItems = [
     'Mon dashboard',
     'Gérer les utilisateurs',
-    'Logs utilisateur',
     'Paramètres',
     'Déconnexion',
   ];
@@ -27,9 +26,6 @@ export default function HomeAdminScreen() {
         break;
       case 'Gérer les utilisateurs':
         router.push('/admin/user-management');
-        break;
-      case 'Logs utilisateur':
-        router.push('/admin/user-logs');
         break;
       case 'Paramètres':
         router.push('/settings');
@@ -77,15 +73,6 @@ export default function HomeAdminScreen() {
             </View>
           </View>
 
-          <View style={[styles.buttonBlock, styles.centeredButton]}>
-            <TouchableOpacity onPress={() => router.push('/admin/user-logs')}>
-              <Image
-                source={require('@/assets/images/logs.png')}
-                style={styles.buttonIcon}
-              />
-            </TouchableOpacity>
-            <AppText style={styles.buttonLabel}>Logs utilisateurs</AppText>
-          </View>
         </View>
         <Footer />
       </View>

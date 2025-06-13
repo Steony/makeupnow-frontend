@@ -1,5 +1,4 @@
 import AppText from '@/components/ui/AppText';
-import BookingCard from '@/components/ui/BookingCard';
 import Footer from '@/components/ui/Footer';
 import HeaderGradient from '@/components/ui/HeaderGradient';
 import { api } from '@/config/api';
@@ -17,14 +16,66 @@ import {
   TouchableWithoutFeedback,
   View
 } from 'react-native';
+import Toast from 'react-native-toast-message';
+
+// --------- AJOUT FONCTION UTILE ---------
+function getDateSchedule(booking:any) {
+  // Cas 1 : Backend renvoie déjà date au format JJ/MM/AA ou JJ/MM/AAAA
+  if (booking.dateSchedule && booking.dateSchedule.includes('/')) return booking.dateSchedule;
+  // Cas 2 : Format ISO ou string YYYY-MM-DD
+  const rawDate =
+    booking.schedule?.startTime ??
+    booking.startTime ??
+    booking.dateSchedule ??
+    booking.schedule?.date ??
+    null;
+
+  if (!rawDate) return 'Date non renseignée';
+
+  if (rawDate.includes('T')) {
+    // Format complet
+    const [date] = rawDate.split('T');
+    const [year, month, day] = date.split('-');
+    if (!year || !month || !day) return date;
+    return `${day}/${month}/${year.slice(2, 4)}`;
+  } else if (rawDate.includes('-')) {
+    // Format juste date
+    const [year, month, day] = rawDate.split('-');
+    if (!year || !month || !day) return rawDate;
+    return `${day}/${month}/${year.slice(2, 4)}`;
+  }
+  return rawDate;
+}
+
+function getTimeSchedule(booking: any) {
+  // Cas 1 : Champ dédié timeSchedule
+  if (booking.timeSchedule) return booking.timeSchedule.slice(0, 5);
+  // Cas 2 : Format ISO
+  const rawDate =
+    booking.schedule?.startTime ??
+    booking.startTime ??
+    booking.schedule?.date ??
+    null;
+  if (!rawDate) return '';
+  if (rawDate.includes('T')) {
+    const parts = rawDate.split('T');
+    if (parts.length < 2) return '';
+    return parts[1].slice(0, 5); // HH:MM
+  }
+  return '';
+}
+
+
+
+
+
 
 export default function UserManagementScreen() {
   const { currentUser } = useAuth();
   const router = useRouter();
 
   // --- States
- const [selectedFilter, setSelectedFilter] = useState<'Tous' | 'Clients' | 'Prestataires' | 'Admins'>('Tous');
-
+  const [selectedFilter, setSelectedFilter] = useState<'Tous' | 'Clients' | 'Prestataires' | 'Admins'>('Tous');
   const [selectedStatus, setSelectedStatus] = useState<'Actif' | 'Suspendu'>('Actif');
   const [statusDropdownVisible, setStatusDropdownVisible] = useState(false);
   const [search, setSearch] = useState('');
@@ -33,21 +84,22 @@ export default function UserManagementScreen() {
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [bookings, setBookings] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
-  const [showBookings, setShowBookings] = useState(true);
   const [showRecentActions, setShowRecentActions] = useState(false);
 
-  // Modals
-  const [suspendModalVisible, setSuspendModalVisible] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  // Bookings
+  const [userBookings, setUserBookings] = useState<{ [userId: number]: any[] }>({});
+  const [openBookings, setOpenBookings] = useState<{ [userId: number]: boolean }>({});
+
+  // Modal global de confirmation
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'suspend' | 'delete' | null>(null);
 
   // --- Menu Admin
   const adminAvatar = require('@/assets/images/avataradmin.png');
   const adminMenuItems = [
     'Mon dashboard',
     'Gérer les utilisateurs',
-    'Logs utilisateur',
     'Paramètres',
     'Déconnexion',
   ];
@@ -57,11 +109,45 @@ export default function UserManagementScreen() {
     const routes: Record<string, string> = {
       'Mon dashboard': '/admin/home',
       'Gérer les utilisateurs': '/admin/user-management',
-      'Logs utilisateur': '/admin/user-logs',
       'Paramètres': '/settings',
     };
     router.push((routes[item] ?? '/') as any);
   };
+
+  // --- Load bookings for a specific user only on demand
+  const loadBookings = async (userId: number, userRole?: string) => {
+    if (!userId || !userRole) return;
+    let url = '';
+    if (userRole === 'CLIENT') url = `/bookings/customer/${userId}`;
+    else if (userRole === 'PROVIDER') url = `/bookings/provider/${userId}`;
+    else { setUserBookings(prev => ({ ...prev, [userId]: [] })); return; }
+
+    try {
+      let res = await api.get(url);
+      let data = res.data;
+      if (typeof data === 'string') {
+        try {
+          if (data.startsWith('[') && data.includes('][')) {
+            const parts = data.split('][');
+            data = parts[0] + ']';
+          }
+          data = JSON.parse(data);
+        } catch { setUserBookings(prev => ({ ...prev, [userId]: [] })); return; }
+      }
+      setUserBookings(prev => ({ ...prev, [userId]: Array.isArray(data) ? data : [] }));
+    } catch { setUserBookings(prev => ({ ...prev, [userId]: [] })); }
+  };
+
+  function formatDateTime(dateString: string) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }) + ' à ' +
+      date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
 
   // --- Loading Users List with Filter/Status/Search
   const loadUsers = async () => {
@@ -70,7 +156,6 @@ export default function UserManagementScreen() {
     try {
       let res = await api.get(url);
       let data = res.data;
-
       if (typeof data === 'string') {
         try {
           if (data.startsWith('[') && data.includes('][')) {
@@ -78,16 +163,12 @@ export default function UserManagementScreen() {
             data = parts[0] + ']';
           }
           data = JSON.parse(data);
-        } catch {
-          setUsers([]); setLoadingUsers(false); return;
-        }
+        } catch { setUsers([]); setLoadingUsers(false); return; }
       }
-
       let filtered = Array.isArray(data) ? data : [];
       if (selectedFilter === 'Clients') filtered = filtered.filter(u => u.role === "CLIENT");
       if (selectedFilter === 'Prestataires') filtered = filtered.filter(u => u.role === "PROVIDER");
       if (selectedFilter === 'Admins') filtered = filtered.filter(u => u.role === "ADMIN");
-
       if (selectedStatus) {
         filtered = filtered.filter(u => (selectedStatus === 'Actif' ? u.isActive : !u.isActive));
       }
@@ -99,56 +180,27 @@ export default function UserManagementScreen() {
         );
       }
       setUsers(filtered);
-    } catch {
-      setUsers([]);
-    }
+    } catch { setUsers([]); }
     setLoadingUsers(false);
   };
 
-  useEffect(() => {
-    loadUsers();
-  }, [selectedFilter, selectedStatus, search]);
+  useEffect(() => { loadUsers(); }, [selectedFilter, selectedStatus, search]);
 
   // --- Auto-select first user when list changes
   useEffect(() => {
-    if (users.length > 0) {
-      setSelectedUserId(users[0].id);
-    } else {
-      setSelectedUserId(null);
-    }
+    if (users.length > 0) setSelectedUserId(users[0].id);
+    else setSelectedUserId(null);
   }, [users]);
 
   useEffect(() => {
     setSelectedUser(users.find(u => u.id === selectedUserId) ?? null);
   }, [selectedUserId, users]);
 
-  // --- Booking & Logs for selected user
-  const loadBookings = async (userId: number) => {
-    if (!userId) return setBookings([]);
-    try {
-      let res = await api.get(`/bookings/user/${userId}`);
-      let data = res.data;
-      if (typeof data === 'string') {
-        try {
-          if (data.startsWith('[') && data.includes('][')) {
-            const parts = data.split('][');
-            data = parts[0] + ']';
-          }
-          data = JSON.parse(data);
-        } catch {
-          setBookings([]); return;
-        }
-      }
-      setBookings(Array.isArray(data) ? data : []);
-    } catch {
-      setBookings([]);
-    }
-  };
-
+  // --- LOGS
   const loadLogs = async (userId: number) => {
     if (!userId) return setLogs([]);
     try {
-      let res = await api.get(`/logs/user/${userId}`);
+      let res = await api.get(`/user-action-logs/user/${userId}`)
       let data = res.data;
       if (typeof data === 'string') {
         try {
@@ -157,40 +209,41 @@ export default function UserManagementScreen() {
             data = parts[0] + ']';
           }
           data = JSON.parse(data);
-        } catch {
-          setLogs([]); return;
-        }
+        } catch { setLogs([]); return; }
       }
       setLogs(Array.isArray(data) ? data : []);
-    } catch {
-      setLogs([]);
-    }
+    } catch { setLogs([]); }
   };
 
-  // --- Charger bookings/logs à chaque sélection de user
   useEffect(() => {
-    if (selectedUserId) {
-      loadBookings(selectedUserId);
-      loadLogs(selectedUserId);
-    } else {
-      setBookings([]);
-      setLogs([]);
-    }
+    if (selectedUserId) loadLogs(selectedUserId);
+    else setLogs([]);
   }, [selectedUserId]);
 
-  // --- Status & Action Buttons
-  const handleToggleStatus = async () => {
-    // Ici, appelle ton endpoint de suspension/réactivation selon selectedUserId
-    // await api.put(`/users/${selectedUserId}/toggle-active`);
-    setSuspendModalVisible(false);
-    await loadUsers();
-  };
-
-  const handleDeleteUser = async () => {
-    // Ici, appelle ton endpoint de suppression
-    // await api.delete(`/users/${selectedUserId}`);
-    setDeleteModalVisible(false);
-    await loadUsers();
+  // --- Global Action (suspend/delete) avec confirmation & toast
+  const handleGlobalAction = async () => {
+    setConfirmModalVisible(false);
+    if (!selectedUser || !confirmAction) return;
+    const adminId = currentUser?.id;
+    const userId = selectedUser.id;
+    try {
+      if (confirmAction === 'suspend') {
+        if (selectedUser.isActive) {
+          await api.put(`/admin/users/${adminId}/deactivate/${userId}`);
+          Toast.show({ type: 'success', text1: 'Utilisateur suspendu !' });
+        } else {
+          await api.put(`/admin/users/${adminId}/reactivate/${userId}`);
+          Toast.show({ type: 'success', text1: 'Utilisateur réactivé !' });
+        }
+      }
+      if (confirmAction === 'delete') {
+        await api.delete(`/admin/users/${adminId}/delete/${userId}`);
+        Toast.show({ type: 'success', text1: 'Compte supprimé définitivement !' });
+      }
+      await loadUsers();
+    } catch {
+      Toast.show({ type: 'error', text1: 'Erreur', text2: "Action impossible. Vérifiez votre connexion ou les droits d'admin." });
+    }
   };
 
   // --- UI
@@ -215,45 +268,43 @@ export default function UserManagementScreen() {
         />
 
         {/* Filtres */}
-        {/* Filtres */}
-<View style={styles.filterContainer}>
-  <AppText style={styles.filterLabel}>Filtre:</AppText>
-  {['Tous', 'Clients', 'Prestataires', 'Admins'].map(option => (
-    <TouchableOpacity
-      key={option}
-      style={[
-        styles.filterButton,
-        selectedFilter === option && styles.activeFilterButton
-      ]}
-      onPress={() => setSelectedFilter(option as any)}
-    >
-      <AppText
-        style={[
-          styles.filterButtonText,
-          selectedFilter === option && styles.activeFilterButtonText
-        ]}
-      >
-        {option}
-      </AppText>
-    </TouchableOpacity>
-  ))}
-</View>
+        <View style={styles.filterContainer}>
+          <AppText style={styles.filterLabel}>Filtre:</AppText>
+          {['Tous', 'Clients', 'Prestataires', 'Admins'].map(option => (
+            <TouchableOpacity
+              key={option}
+              style={[
+                styles.filterButton,
+                selectedFilter === option && styles.activeFilterButton
+              ]}
+              onPress={() => setSelectedFilter(option as any)}
+            >
+              <AppText
+                style={[
+                  styles.filterButtonText,
+                  selectedFilter === option && styles.activeFilterButtonText
+                ]}
+              >
+                {option}
+              </AppText>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-<View style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 10 }}>
-  <TouchableOpacity
-    style={[styles.filterButton, { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start' }]}
-    onPress={() => setStatusDropdownVisible(true)}
-  >
-    <AppText style={styles.filterButtonText}>État</AppText>
-    <Image
-      source={require('@/assets/images/arrow-down.png')}
-      style={{ width: 25, height: 25, marginLeft: 9 }}
-      resizeMode="contain"
-    />
-  </TouchableOpacity>
-</View>
-<Separator />
-
+        <View style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 10 }}>
+          <TouchableOpacity
+            style={[styles.filterButton, { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start' }]}
+            onPress={() => setStatusDropdownVisible(true)}
+          >
+            <AppText style={styles.filterButtonText}>État</AppText>
+            <Image
+              source={require('@/assets/images/arrow-down.png')}
+              style={{ width: 25, height: 25, marginLeft: 9 }}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </View>
+        <Separator />
 
         {/* Dropdown État */}
         <Modal transparent visible={statusDropdownVisible} animationType="fade">
@@ -274,191 +325,275 @@ export default function UserManagementScreen() {
           </TouchableWithoutFeedback>
         </Modal>
         <Separator />
-  <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Fiche utilisateur sélectionné */}
-        
+
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
           {users.length === 0 && (
             <AppText style={{ color: '#a478dd', textAlign: 'center', marginTop: 24 }}>
               Aucun utilisateur trouvé
             </AppText>
           )}
-          {/* Pour chaque utilisateur */}
-        
           {users.map(user => (
             <View key={user.id}>
-
-
-              {/* Fiche utilisateur */}
-             <View style={styles.userCard}>
-  <Image
-    source={
-      user.role === 'ADMIN'
-        ? require('@/assets/images/avataradmin.png')
-        : user.role === 'PROVIDER'
-          ? require('@/assets/images/avatarprovider.png')
-          : require('@/assets/images/avatarclient.png')
-    }
-    style={styles.userAvatar}
-  />
-  <View style={styles.userInfo}>
-    <AppText style={styles.userName}>
-      {user.firstname} {user.lastname}
-    </AppText>
-    <View style={styles.badgeRow}>
-      <View style={[
-        styles.statusBadge,
-        { backgroundColor: user.isActive ? '#008505' : '#9B0404' }
-      ]}>
-        <AppText style={styles.badgeText}>
-          {user.isActive ? 'Actif' : 'Suspendu'}
-        </AppText>
-      </View>
-      <View style={[
-        styles.statusBadge,
-        {
-          backgroundColor:
-            user.role === 'ADMIN'
-              ? '#0313A2'
-              : user.role === 'PROVIDER'
-                ? '#8602BF'
-                : '#BD6E00'
-        }
-      ]}>
-        <AppText style={styles.badgeText}>
-          {user.role === 'ADMIN'
-            ? 'Admin'
-            : user.role === 'PROVIDER'
-              ? 'Prestataire'
-              : 'Client'}
-        </AppText>
-      </View>
-    </View>
-    <AppText style={styles.userEmail}>{user.email}</AppText>
-    <View style={styles.actionRow}>
-      <TouchableOpacity
-        onPress={() => { setSelectedUserId(user.id); setSuspendModalVisible(true); }}
-        style={styles.suspendButton}
-      >
-        <AppText style={styles.suspendButtonText}>
-          {user.isActive ? 'Suspendre' : 'Réactiver'}
-        </AppText>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => { setSelectedUserId(user.id); setDeleteModalVisible(true); }}
-        style={styles.deleteButton}
-      >
-        <AppText style={styles.deleteButtonText}>Supprimer le compte</AppText>
-      </TouchableOpacity>
-    </View>
-  </View>
-  <Separator />
-</View>
-
+              <View style={styles.userCard}>
+                <Image
+                  source={
+                    user.role === 'ADMIN'
+                      ? require('@/assets/images/avataradmin.png')
+                      : user.role === 'PROVIDER'
+                        ? require('@/assets/images/avatarprovider.png')
+                        : require('@/assets/images/avatarclient.png')
+                  }
+                  style={styles.userAvatar}
+                />
+                <View style={styles.userInfo}>
+                  <AppText style={styles.userName}>
+                    {user.firstname} {user.lastname}
+                  </AppText>
+                  <View style={styles.badgeRow}>
+                    <View style={[
+                      styles.statusBadge,
+                      { backgroundColor: user.isActive ? '#008505' : '#9B0404' }
+                    ]}>
+                      <AppText style={styles.badgeText}>
+                        {user.isActive ? 'Actif' : 'Suspendu'}
+                      </AppText>
+                    </View>
+                    <View style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor:
+                          user.role === 'ADMIN'
+                            ? '#0313A2'
+                            : user.role === 'PROVIDER'
+                              ? '#8602BF'
+                              : '#FF68CD'
+                      }
+                    ]}>
+                      <AppText style={styles.badgeText}>
+                        {user.role === 'ADMIN'
+                          ? 'Admin'
+                          : user.role === 'PROVIDER'
+                            ? 'Prestataire'
+                            : 'Client'}
+                      </AppText>
+                    </View>
+                  </View>
+                  <AppText style={styles.userEmail}>{user.email}</AppText>
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedUserId(user.id);
+                        setSelectedUser(user);
+                        setConfirmAction('suspend');
+                        setConfirmModalVisible(true);
+                      }}
+                      style={styles.suspendButton}
+                    >
+                      <AppText style={styles.suspendButtonText}>
+                        {user.isActive ? 'Suspendre' : 'Réactiver'}
+                      </AppText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedUserId(user.id);
+                        setSelectedUser(user);
+                        setConfirmAction('delete');
+                        setConfirmModalVisible(true);
+                      }}
+                      style={styles.deleteButton}
+                    >
+                      <AppText style={styles.deleteButtonText}>Supprimer le compte</AppText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <Separator />
+              </View>
 
               {/* Réservations et paiements */}
-              <TouchableOpacity onPress={() => setShowBookings(!showBookings)} style={styles.sectionHeader}>
+              <TouchableOpacity
+                onPress={() => {
+                  setOpenBookings(prev => ({
+                    ...prev,
+                    [user.id]: !prev[user.id]
+                  }));
+                  if (!userBookings[user.id]) loadBookings(user.id, user.role);
+                }}
+                style={styles.sectionHeader}
+              >
                 <AppText style={styles.sectionTitle}>Réservations et paiements</AppText>
                 <Image
-                  source={showBookings ? require('@/assets/images/arrow-up.png') : require('@/assets/images/arrow-down.png')}
+                  source={
+                    openBookings[user.id]
+                      ? require('@/assets/images/arrow-up.png')
+                      : require('@/assets/images/arrow-down.png')
+                  }
                   style={{ width: 35, height: 35 }}
                 />
               </TouchableOpacity>
-              {showBookings && bookings.map(b => (
-                <BookingCard
-                  key={b.id}
-                  title={b.title ?? b.serviceTitle ?? b.service?.title ?? ''}
-                  dateSchedule={b.dateSchedule ?? b.schedule?.startTime?.split('T')[0] ?? ''}
-                  timeSchedule={b.timeSchedule ?? (b.schedule?.startTime ? b.schedule?.startTime.split('T')[1]?.substring(0, 5) : '')}
-                  price={b.totalPrice ?? b.price ?? 0}
-                  status={
-                    b.status === 'CONFIRMED'
-                      ? 'Confirmé'
-                      : b.status === 'COMPLETED'
-                        ? 'Terminé et payé'
-                        : b.status === 'CANCELLED'
-                          ? 'Annulé'
-                          : b.status ?? ''
-                  }
-                  address={b.address ?? b.provider?.address ?? ''}
-                  providerName={b.providerName ?? b.provider?.firstname + ' ' + b.provider?.lastname}
-                  providerEmail={b.providerEmail ?? b.provider?.email}
-                  providerPhone={b.providerPhone ?? b.provider?.phoneNumber}
-                  clientName={b.clientName ?? b.customer?.firstname + ' ' + b.customer?.lastname}
-                  clientEmail={b.clientEmail ?? b.customer?.email}
-                  clientPhone={b.clientPhone ?? b.customer?.phoneNumber}
-                  rating={b.review?.rating}
-                  review={b.review?.comment}
-                  reviewDate={b.review?.dateComment}
-                  role="Admin"
-                  // onPressModifyPayment={() => ...}
-                />
-              ))}
+
+              {openBookings[user.id] && (
+                userBookings[user.id]?.length > 0 ? (
+                  <View>
+                    {(() => {
+                      const lastBooking = userBookings[user.id][userBookings[user.id].length - 1];
+                      return (
+                        <View style={{
+                          backgroundColor: '#f5edf9',
+                          borderRadius: 12,
+                          padding: 15,
+                          marginHorizontal: 16,
+                          marginTop: 8,
+                          marginBottom: 0,
+                          shadowColor: '#000',
+                          shadowOpacity: 0.3,
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowRadius: 4,
+                          elevation: 1,
+                        }}>
+                          <AppText style={{ fontWeight: 'bold', fontSize: 18, color: '#381b34' }}>
+                            {lastBooking.serviceTitle || lastBooking.title || lastBooking.service?.title || 'Prestation'}
+                          </AppText>
+
+                          
+                           <AppText style={{ fontSize: 15, color: '#000', marginTop: 10, }}>
+  {`Le ${getDateSchedule(lastBooking)}${getTimeSchedule(lastBooking) ? ' à ' + getTimeSchedule(lastBooking) : ''}`}
+</AppText>
+
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 3 }}>
+                            <AppText style={{ fontSize: 15, color: '#444' }}>
+
+                            
+                            </AppText>
+                            <AppText style={{ color: lastBooking.status === 'CANCELLED' ? '#C42A5A' : '#7C55B1', fontWeight: 'bold', marginTop: -10, fontSize: 17, }}>
+                              {lastBooking.status === 'CONFIRMED'
+                                ? 'Confirmé'
+                                : lastBooking.status === 'COMPLETED'
+                                  ? 'Terminé et payé'
+                                  : lastBooking.status === 'CANCELLED'
+                                    ? 'Annulé'
+                                    : lastBooking.status ?? ''}
+                            </AppText>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                            <AppText style={{ fontWeight: 'bold', fontSize: 17, color: '#1A092B', marginBottom: 2, }}>
+                              {(lastBooking.totalPrice ?? lastBooking.price ?? 0) + '€'}
+                            </AppText>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                            <Image source={require('@/assets/images/clock.png')} style={{ width: 28, height: 28, marginRight: 7 }} />
+                            <AppText style={{ color: '#000', fontWeight: '600', fontSize: 15 }}>
+                              {(() => {
+                                const d =
+                                  (typeof lastBooking.serviceDuration === 'string'
+                                    ? parseInt(lastBooking.serviceDuration, 10)
+                                    : lastBooking.serviceDuration) ||
+                                  lastBooking.schedule?.duration ||
+                                  lastBooking.duration ||
+                                  0;
+                                if (d >= 60) return `${Math.floor(d / 60)}h${d % 60 ? d % 60 : ''}`;
+                                return `${d}min`;
+                              })()}
+                            </AppText>
+                            <Image source={require('@/assets/images/location.png')} style={{ width: 28, height: 28, marginLeft: 16, marginRight: 6 }} />
+                            <AppText style={{ color: '#000', fontSize: 15 }}>
+                              {lastBooking.provider?.address ||
+                                lastBooking.providerAddress ||
+                                ''}
+                            </AppText>
+                          </View>
+                          
+                          <TouchableOpacity
+  style={[styles.viewAllButton, { marginTop: 18, alignSelf: 'flex-end' }]}
+  onPress={() => {
+    
+    if (user.role === 'CLIENT') router.push(`/admin/user-bookings?userId=${user.id}`);
+    else if (user.role === 'PROVIDER') router.push(`/admin/user-bookings?providerId=${user.id}`);
+  
+  }}
+>
+  <AppText style={styles.viewAllText}>
+    Voir toutes les réservations
+  </AppText>
+</TouchableOpacity>
+
+                        </View>
+                      );
+                    })()}
+                    <TouchableOpacity
+                      style={[styles.viewAllButton, { marginTop: 10, marginLeft: 16 }]}
+                      onPress={() => router.push(`/admin/user-bookings`)}
+                    >
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <AppText style={{ color: '#a478dd', marginLeft: 25, marginBottom: 10 }}>
+                    Aucune réservation
+                  </AppText>
+                )
+              )}
               <Separator />
 
               {/* Actions récentes / logs */}
-              <TouchableOpacity onPress={() => setShowRecentActions(!showRecentActions)} style={styles.sectionHeader}>
+              <TouchableOpacity
+                onPress={() => setShowRecentActions(!showRecentActions)}
+                style={styles.sectionHeader}
+              >
                 <AppText style={styles.sectionTitle}>Actions récentes</AppText>
                 <Image
-                  source={showRecentActions ? require('@/assets/images/arrow-up.png') : require('@/assets/images/arrow-down.png')}
+                  source={
+                    showRecentActions
+                      ? require('@/assets/images/arrow-up.png')
+                      : require('@/assets/images/arrow-down.png')
+                  }
                   style={{ width: 35, height: 35 }}
                 />
               </TouchableOpacity>
+
               {showRecentActions && (
-                <View style={styles.logContainer}>
+                <View style={[styles.logContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                   {logs.length === 0 ? (
                     <AppText style={{ color: '#a478dd' }}>Aucune action récente</AppText>
                   ) : (
-                    logs.map((log: any, idx: number) => (
-                      <View key={log.id ?? idx} style={styles.logItem}>
-                        <AppText style={styles.logAction}>{log.action ?? log.message}</AppText>
-                        <AppText style={styles.logDate}>{log.date ?? log.createdAt}</AppText>
-                      </View>
-                    ))
+                    <View style={{ flex: 1 }}>
+                      <AppText style={[styles.logAction, { fontWeight: 'bold', fontSize: 18 }]}>
+                        {logs[0]?.id ? `#${logs[0].id} — ` : ''}
+                        {logs[0]?.action ?? logs[0]?.message}
+                      </AppText>
+                      <AppText style={styles.logDate}>
+                        {logs[0]?.timestamp
+                          ? formatDateTime(logs[0].timestamp)
+                          : logs[0]?.date ?? logs[0]?.createdAt}
+                      </AppText>
+                    </View>
                   )}
                   <TouchableOpacity
                     style={styles.viewAllButton}
-                    onPress={() => router.push('/admin/user-logs')}
+                    onPress={() => router.push(`/admin/user-logs?userId=${user.id}`)}
                   >
                     <AppText style={styles.viewAllText}>Voir tout</AppText>
                   </TouchableOpacity>
                 </View>
               )}
-               <View style={{ height: 4, backgroundColor: '#7C7C7C', marginHorizontal: 3, marginVertical: 5 }} />
+
+              <View style={{ height: 4, backgroundColor: '#7C7C7C', marginHorizontal: 3, marginVertical: 5 }} />
             </View>
           ))}
 
-          {/* Modals suspend/delete */}
-          <Modal transparent visible={suspendModalVisible} animationType="fade">
-            <TouchableWithoutFeedback onPress={() => setSuspendModalVisible(false)}>
+          {/* Modal universelle de confirmation */}
+          <Modal transparent visible={confirmModalVisible} animationType="fade">
+            <TouchableWithoutFeedback onPress={() => setConfirmModalVisible(false)}>
               <View style={styles.overlay}>
                 <View style={[styles.dropdownContainer, { width: 250, alignItems: 'center', padding: 20 }]}>
-                  <AppText style={{ fontWeight: 'bold', fontSize: 16 }}>
-                    {selectedUser?.isActive ? 'Suspendre ce compte ?' : 'Réactiver ce compte ?'}
+                  <AppText style={{ fontWeight: 'bold', fontSize: 16, textAlign: 'center', marginBottom: 15 }}>
+                    {confirmAction === 'suspend'
+                      ? (selectedUser?.isActive ? 'Suspendre ce compte ?' : 'Réactiver ce compte ?')
+                      : 'Supprimer définitivement ce compte ?'}
                   </AppText>
-                  <View style={{ flexDirection: 'row', marginTop: 18 }}>
-                    <TouchableOpacity onPress={handleToggleStatus} style={styles.suspendButton}>
+                  <View style={{ flexDirection: 'row', marginTop: 10 }}>
+                    <TouchableOpacity onPress={handleGlobalAction} style={styles.suspendButton}>
                       <AppText style={styles.suspendButtonText}>Confirmer</AppText>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setSuspendModalVisible(false)} style={styles.deleteButton}>
-                      <AppText style={styles.deleteButtonText}>Annuler</AppText>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </Modal>
-          <Modal transparent visible={deleteModalVisible} animationType="fade">
-            <TouchableWithoutFeedback onPress={() => setDeleteModalVisible(false)}>
-              <View style={styles.overlay}>
-                <View style={[styles.dropdownContainer, { width: 250, alignItems: 'center', padding: 20 }]}>
-                  <AppText style={{ fontWeight: 'bold', fontSize: 16 }}>
-                    Supprimer définitivement ce compte ?
-                  </AppText>
-                  <View style={{ flexDirection: 'row', marginTop: 18 }}>
-                    <TouchableOpacity onPress={handleDeleteUser} style={styles.suspendButton}>
-                      <AppText style={styles.suspendButtonText}>Supprimer</AppText>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setDeleteModalVisible(false)} style={styles.deleteButton}>
+                    <TouchableOpacity onPress={() => setConfirmModalVisible(false)} style={styles.deleteButton}>
                       <AppText style={styles.deleteButtonText}>Annuler</AppText>
                     </TouchableOpacity>
                   </View>
@@ -467,20 +602,18 @@ export default function UserManagementScreen() {
             </TouchableWithoutFeedback>
           </Modal>
         </ScrollView>
-       <Footer/>
+        <Footer />
+       
+        <Toast />
       </View>
-     
     </SafeAreaView>
   );
 }
 
-
+// Styles (identique à avant)
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  scrollContainer: {
-  paddingBottom: 32,  
-  paddingHorizontal: 0, 
-},
+  container: { flex: 1, backgroundColor: '#fff',  },
+  scrollContainer: { paddingBottom: 16 },
   filterContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 10, marginTop: 15, marginBottom: 10 },
   filterLabel: { fontSize: 16, fontWeight: 'bold', marginRight: 8 },
   filterButton: { borderWidth: 1, borderColor: '#a478dd', borderRadius: 20, paddingVertical: 4, paddingHorizontal: 12, marginHorizontal: 2, backgroundColor: '#fff' },
@@ -491,37 +624,63 @@ const styles = StyleSheet.create({
   dropdownContainer: { backgroundColor: '#fff', borderRadius: 8, width: 130, elevation: 5 },
   dropdownItem: { paddingVertical: 10, paddingHorizontal: 15, borderBottomWidth: 1, borderBottomColor: '#eee' },
   dropdownItemText: { fontSize: 15, color: '#381b34', textAlign: 'center' },
-  userCard: { flexDirection: 'row', backgroundColor: '#fff', margin: 16, padding: 12, borderRadius: 12, elevation: 3 },
+  userCard: { flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 18,
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.7,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3, },
   userAvatar: { width: 56, height: 56, borderRadius: 30, marginRight: 12 },
   userInfo: { flex: 1 },
   userName: { fontSize: 17, fontWeight: 'bold', color: '#381b34' },
   userEmail: { color: '#5d4370', marginTop: 3, marginBottom: 10 },
   badgeRow: { flexDirection: 'row', marginVertical: 9 },
   statusBadge: { borderRadius: 4, paddingHorizontal: 7, paddingVertical: 4, marginRight: 5 },
-  badgeText: { color: '#fff', fontSize: 13, },
+  badgeText: { color: '#fff', fontSize: 13 },
   actionRow: { flexDirection: 'row', marginTop: 8 },
-  suspendButton: { backgroundColor: '#fff',borderWidth: 1, borderColor: '#000',  borderRadius: 5, paddingVertical: 4, paddingHorizontal: 10, marginRight: 10 },
+  suspendButton: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#000', borderRadius: 5, paddingVertical: 4, paddingHorizontal: 10, marginRight: 10, 
+    shadowColor: '#000',
+    shadowOpacity: 0.9,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 4,
+    elevation: 1, },
   suspendButtonText: { color: '#381b34', fontSize: 13 },
-  deleteButton: { backgroundColor: '#000', borderRadius: 5, paddingVertical: 4, paddingHorizontal: 10, marginLeft: 27, },
+  deleteButton: { backgroundColor: '#000', borderRadius: 5, paddingVertical: 4, paddingHorizontal: 10, marginLeft: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.9,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 4,
+    elevation: 1,
+   },
   deleteButtonText: { color: '#fff', fontSize: 13 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingHorizontal: 16, paddingVertical: 12 },
   sectionTitle: { fontSize: 17, fontWeight: 'bold', color: '#381b34', },
   logContainer: {
     backgroundColor: '#f5edf9',
-    borderRadius: 10,
-    marginHorizontal: 5,
-    marginBottom: 25,
-    padding: 12,
-    elevation: 2,
+    borderRadius: 12,
+    padding: 15,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 1 },
     shadowRadius: 4,
+    elevation: 1,
   },
-  logItem: { marginBottom: 10 },
-  logAction: { fontWeight: 'bold', color: '#381b34', marginBottom: 4 },
+  logItem: { marginBottom: 10,  },
+  logAction: { fontWeight: 'bold', color: '#381b34', marginBottom: 4, shadowColor: '#000',
+     },
   logDate: { color: '#555' },
-  viewAllButton: { alignSelf: 'flex-end' },
-  viewAllText: { color: '#6229c6', fontWeight: 'bold' },
-});
+  viewAllButton: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 7, marginTop: 4, },
+  viewAllText: { fontSize: 16, color: '#6229c6', fontWeight: 'bold' },
 
+
+
+});

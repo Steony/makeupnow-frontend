@@ -66,7 +66,7 @@ export default function BookingList() {
         }
       }
 
-      console.log('BOOKINGS_REÇUS:', data); // 👈 Ajoute ce log pour debug
+      console.log('BOOKINGS_REÇUS:', data); 
 
       setBookings(data);
     } catch (error) {
