@@ -14,18 +14,18 @@ export default function HomeProviderScreen() {
   // ✅ Avatar statique pour le Provider
   const providerAvatar = require('@/assets/images/avatarprovider.png');
 
-  const providerMenuItems = ['Mon dashboard', 'Mes prestations', 'Mon planning', 'Paramètres', 'Déconnexion'];
+  const providerMenuItems = ['Mon dashboard', 'Services', 'Réservations clients', 'Paramètres', 'Déconnexion'];
 
   const handleMenuItemPress = (item: string) => {
     switch (item) {
       case 'Mon dashboard':
         router.push('/provider/home');
         break;
-      case 'Mes prestations':
+      case 'Services':
         router.push('/provider/services');
         break;
-      case 'Mon planning':
-        router.push('/provider/planning');
+      case 'Réservations clients':
+        router.push('/provider/booking-list');
         break;
       case 'Paramètres':
         router.push('/settings');
@@ -54,13 +54,13 @@ export default function HomeProviderScreen() {
         <View style={styles.profileContainer}>
           <View style={styles.rowButtonsContainer}>
             <View style={styles.buttonBlock}>
-              <TouchableOpacity onPress={() => router.push('/provider/planning')}>
+              <TouchableOpacity onPress={() => router.push('/provider/booking-list')}>
                 <Image
                   source={require('@/assets/images/bookingcustomer.png')}
                   style={styles.buttonIcon}
                 />
               </TouchableOpacity>
-              <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Mon planning</AppText>
+              <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Réservations clients</AppText>
             </View>
 
             <View style={styles.buttonBlock}>
@@ -70,7 +70,7 @@ export default function HomeProviderScreen() {
                   style={styles.buttonIcon}
                 />
               </TouchableOpacity>
-              <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Mes prestations</AppText>
+              <AppText style={[styles.buttonLabel, { fontFamily: 'app-test' }]}>Services</AppText>
             </View>
           </View>
 
@@ -91,7 +91,7 @@ export default function HomeProviderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5edf9' },
+  container: { flex: 1, backgroundColor: '#ffff' },
   profileContainer: {
     alignItems: 'center',
     marginTop: 20,

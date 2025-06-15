@@ -6,7 +6,7 @@ import { api } from '@/config/api';
 import { useAuth } from '@/utils/AuthContext';
 import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 export default function PasswordChangeScreen() {
@@ -77,6 +77,7 @@ export default function PasswordChangeScreen() {
   };
 
   return (
+    <SafeAreaView style={styles.safeArea}>
     <View style={styles.container}>
       <HeaderWithBackButton
         title="Modifier le mot de passe"
@@ -138,10 +139,12 @@ export default function PasswordChangeScreen() {
 
       <Footer />
     </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, backgroundColor: '#fff' },
   form: { flex: 1, padding: 20 },
   label: { fontSize: 16, fontWeight: 'bold', color: '#371B34', marginTop: 20, marginBottom: 4 },

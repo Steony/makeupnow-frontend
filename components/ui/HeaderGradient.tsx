@@ -1,5 +1,6 @@
 import AppText from '@/components/ui/AppText';
 import { useAuth } from '@/utils/AuthContext';
+import { handleLogout } from '@/utils/authService';
 import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
@@ -20,12 +21,26 @@ const MenuBurger = ({
   onClose,
   items = [],
   onItemPress,
+  onLogout,
 }: {
   visible: boolean;
   onClose: () => void;
   items?: string[];
   onItemPress?: (item: string) => void;
+  onLogout?: () => void;
 }) => {
+  const handleItemPress = (item: string) => {
+    if (onItemPress) onItemPress(item);
+
+    if (item.toLowerCase() === 'déconnexion') {
+      if (onLogout) {
+        onLogout();
+      }
+    }
+
+    onClose();
+  };
+
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
@@ -36,10 +51,7 @@ const MenuBurger = ({
                 <TouchableOpacity
                   key={index}
                   style={styles.menuItem}
-                  onPress={() => {
-                    if (onItemPress) onItemPress(item);
-                    onClose();
-                  }}
+                  onPress={() => handleItemPress(item)}
                 >
                   <AppText style={styles.menuText}>{item}</AppText>
                 </TouchableOpacity>
@@ -143,15 +155,12 @@ export default function HeaderGradient({
   menuItems = [],
   onMenuItemPress,
 }: HeaderGradientProps) {
-  console.log('🟣 HeaderGradient - searchQuery:', searchQuery);
-  console.log('🟣 HeaderGradient - locationQuery:', locationQuery);
-  const { currentUser } = useAuth();
+  const { currentUser, setCurrentUser } = useAuth();
   const defaultAvatar = getDefaultAvatar(
     (currentUser?.role?.toUpperCase() as 'CLIENT' | 'PROVIDER' | 'ADMIN') || 'CLIENT'
   );
 
-  const dynamicAvatar =
-    avatarUri || defaultAvatar;
+  const dynamicAvatar = avatarUri || defaultAvatar;
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
@@ -165,10 +174,17 @@ export default function HeaderGradient({
     }
   };
 
+  // Fonction logout propre qui vide le contexte
+  const logout = async () => {
+    await handleLogout();
+    setCurrentUser(null);
+    setMenuVisible(false);
+  };
+
   return (
     <>
       <LinearGradient
-        colors={['rgba(239, 222, 253, 0.9)', 'rgb(98, 41, 198)']}
+        colors={['rgba(216, 185, 241, 0.9)', 'rgb(98, 41, 198)']}
         style={styles.gradient}
         start={{ x: 0.8, y: 0.2 }}
         end={{ x: 0.2, y: 1 }}
@@ -176,11 +192,19 @@ export default function HeaderGradient({
         <View style={styles.headerRow}>
           {showMenu && (
             <TouchableOpacity onPress={toggleMenu} style={styles.menuButton}>
-              <Image source={require('../../assets/images/menuBar.png')} style={styles.menuIcon} resizeMode="contain" />
+              <Image
+                source={require('../../assets/images/menuBar.png')}
+                style={styles.menuIcon}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           )}
           <Image
-            source={typeof dynamicAvatar === 'string' && dynamicAvatar.startsWith('http') ? { uri: dynamicAvatar } : dynamicAvatar}
+            source={
+              typeof dynamicAvatar === 'string' && dynamicAvatar.startsWith('http')
+                ? { uri: dynamicAvatar }
+                : dynamicAvatar
+            }
             style={styles.avatar}
             resizeMode="cover"
           />
@@ -235,6 +259,7 @@ export default function HeaderGradient({
         onClose={() => setMenuVisible(false)}
         items={menuItems}
         onItemPress={onMenuItemPress}
+        onLogout={logout} // <--- ici on passe la vraie fonction logout
       />
 
       <FilterModalCategory
@@ -249,7 +274,7 @@ export default function HeaderGradient({
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  gradient: { width, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, paddingTop: 70, paddingHorizontal: 35 },
+  gradient: { width, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, paddingTop: 10, paddingHorizontal: 35 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   menuButton: { padding: 8 },
   menuIcon: { width: 55, height: 55 },

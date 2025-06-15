@@ -140,6 +140,25 @@ const clientName = currentUser ? getUserFullName(currentUser.name) : '';
       let data = res.data;
       console.log('🟣 Data reçu Schedules:', data);
 
+      // Si data est un string avec ][, on prend juste le premier tableau
+if (typeof data === 'string' && data.includes('][')) {
+  const match = data.match(/\[[^\]]*\]/); // prend juste le premier [ ... ]
+  if (match) {
+    try {
+      data = JSON.parse(match[0]);
+    } catch {
+      data = [];
+    }
+  }
+} else if (typeof data === 'string') {
+  try {
+    data = JSON.parse(data);
+  } catch {
+    data = [];
+  }
+}
+
+
       // Correction du bug "array double"
       if (typeof data === 'string' && data.includes('][')) {
         const firstArrayMatch = data.match(/\[[\s\S]*?\]/);
@@ -155,6 +174,10 @@ const clientName = currentUser ? getUserFullName(currentUser.name) : '';
           data = [];
         }
       }
+
+      console.log('→ Array reçu AVANT setAvailableSchedules:', data, Array.isArray(data) ? `(${data.length})` : 'not array');
+      
+      
       if (!Array.isArray(data)) data = [];
       setAvailableSchedules(data);
       console.log('🟠 Nb créneaux stockés:', data.length);
@@ -318,7 +341,8 @@ const clientName = currentUser ? getUserFullName(currentUser.name) : '';
             onPress={() => {
               if (
                 selectedGlobal &&
-                selectedGlobal.scheduleId &&
+                typeof selectedGlobal.scheduleId === 'number' &&
+
                 selectedServiceGlobal &&
                 selectedServicePrice !== null &&
                 currentUser

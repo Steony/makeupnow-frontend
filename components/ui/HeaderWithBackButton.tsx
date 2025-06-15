@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
     paddingHorizontal: 10,
-    paddingTop: 40,
+    paddingTop: 20,
   },
   backButton: {
     marginRight: 10,

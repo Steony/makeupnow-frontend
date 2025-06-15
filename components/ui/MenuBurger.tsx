@@ -1,4 +1,3 @@
-import { handleLogout } from '@/utils/authService'; // Import la méthode de déconnexion
 import React from 'react';
 import {
   Modal,
@@ -14,6 +13,7 @@ interface MenuBurgerProps {
   onClose: () => void;
   items: string[];
   onItemPress?: (item: string) => void;
+  onLogout?: () => void; // <-- ajoute cette prop
 }
 
 export default function MenuBurger({
@@ -21,17 +21,17 @@ export default function MenuBurger({
   onClose,
   items,
   onItemPress,
+  onLogout,
 }: MenuBurgerProps) {
   const handleItemPress = (item: string) => {
-    // S'il y a un callback personnalisé, on l'appelle
     if (onItemPress) onItemPress(item);
 
-    // Si l'item est "Déconnexion", on appelle directement handleLogout
     if (item.toLowerCase() === 'déconnexion') {
-      handleLogout();
+      if (onLogout) {
+        onLogout(); // Appelle la vraie déconnexion qui vide le contexte
+      }
     }
 
-    // Fermer le menu burger
     onClose();
   };
 

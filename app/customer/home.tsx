@@ -148,6 +148,7 @@ export default function CustomerHomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+       <ScrollView>
       <HeaderGradient
         title={`Bienvenue, ${currentUser?.name || 'Client'} !`}
         subtitle="Trouvez votre Make up Artist !"
@@ -183,7 +184,7 @@ export default function CustomerHomeScreen() {
         )}
       </View>
 
-      <ScrollView>
+     
         {filteredProviders.length === 0 ? (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
             <Text style={{ color: '#A478DD', fontSize: 18 }}>
@@ -212,6 +213,6 @@ export default function CustomerHomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F3EDF7',
+    backgroundColor: '#fff',
   },
 });

@@ -1,5 +1,6 @@
 // src/screens/Login.tsx
 
+import { useAuth } from '@/utils/AuthContext';
 import { Inter_400Regular, useFonts } from '@expo-google-fonts/inter';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -27,6 +28,8 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const { refreshUser } = useAuth();  // <-- ici, avant tout return conditionnel
+
   const [fontsLoaded] = useFonts({ Inter_400Regular });
   if (!fontsLoaded) {
     return (
@@ -52,6 +55,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await handleLogin(emailTrimmed, password);
+      await refreshUser(); // recharge les infos utilisateur après connexion
     } catch {
       // handleLogin gère déjà l’affichage des erreurs
     } finally {

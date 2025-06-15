@@ -12,6 +12,7 @@ interface BookingSummaryCardProps {
   duration: string;
   clientName: string;
   price: number;
+  paymentStatus?: string; 
 }
 
 export default function BookingSummaryCard({
@@ -22,6 +23,7 @@ export default function BookingSummaryCard({
   duration,
   clientName,
   price,
+  paymentStatus, 
 }: BookingSummaryCardProps) {
   return (
     <View style={styles.card}>
@@ -56,7 +58,9 @@ export default function BookingSummaryCard({
       <AppText style={[styles.text, styles.clientText]}>Pour : {clientName}</AppText>
 
       {/* Prix total */}
-      <AppText style={styles.price}>Total: {price} €</AppText>
+      <AppText style={styles.price}>Total : {price} €</AppText>
+
+      
     </View>
   );
 }
@@ -68,7 +72,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
     shadowColor: '#000',
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.3,
     shadowRadius: 9,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
@@ -82,11 +86,11 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 20,
   },
   icon: {
-    width: 35,
-    height: 35,
+    width: 25,
+    height: 25,
     marginRight: 16,
   },
   text: {
@@ -102,4 +106,5 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontSize: 18,
   },
+  
 });

@@ -1,6 +1,6 @@
 import { Inter_400Regular, useFonts } from '@expo-google-fonts/inter';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -10,18 +10,34 @@ import {
   View,
 } from 'react-native';
 import PrimaryButton from '../components/ui/PrimaryButton';
+import { useAuth } from '../utils/AuthContext'; // 👈 ajoute ça
 
 export const unstable_settings = {
-  headerShown: false, // Désactiver le header automatique d’Expo Router
+  headerShown: false,
 };
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { width } = Dimensions.get('window');
+  const { currentUser } = useAuth(); // 👈 accès au user connecté
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
   });
+
+  useEffect(() => {
+    if (currentUser) {
+      // Rediriger vers la home en fonction du rôle
+      const role = currentUser.role;
+      if (role === 'CLIENT') {
+        router.replace('/customer/home');
+      } else if (role === 'PROVIDER') {
+        router.replace('/provider/home');
+      } else if (role === 'ADMIN') {
+        router.replace('/admin/home');
+      }
+    }
+  }, [currentUser, router]);
 
   if (!fontsLoaded) {
     return (
@@ -37,20 +53,16 @@ export default function WelcomeScreen() {
 
   return (
     <ImageBackground
-  source={require('../assets/images/background-index.png')}
-  style={[styles.background, { overflow: 'hidden' }]}
-  resizeMode="cover"
->
-
+      source={require('../assets/images/background-index.png')}
+      style={[styles.background, { overflow: 'hidden' }]}
+      resizeMode="cover"
+    >
       <View style={styles.container}>
         <Image
           source={require('../assets/images/logo-makeupnow.png')}
           style={[styles.logoImage, { width: width * 0.9, height: width * 0.9 }]}
           resizeMode="contain"
         />
-
-        
-
         <PrimaryButton title="C’est parti !" onPress={handlePress} />
       </View>
     </ImageBackground>
@@ -69,7 +81,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
   container: {
     flex: 1,
     alignItems: 'center',
@@ -85,12 +96,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#A478DD',
     paddingVertical: 20,
     paddingHorizontal: 70,
-    // Ombre pour iOS
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
-    // Ombre pour Android
     elevation: 5,
   },
   buttonText: {

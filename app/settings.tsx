@@ -7,7 +7,7 @@ import { useAuth } from '@/utils/AuthContext';
 import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Modal, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 export default function SettingsScreen() {
@@ -58,7 +58,7 @@ export default function SettingsScreen() {
         setEmail(data.email || '');
         setPhone(data.phoneNumber || '');
         setAddress(data.address || '');
-        setId(data.id || null); // ⚠️ Correction ici : on set bien l'id reçu du backend
+        setId(data.id || null); 
       } catch (error) {
         console.error('Erreur lors du chargement des infos user:', error);
       }
@@ -113,9 +113,10 @@ export default function SettingsScreen() {
     }
   };
 
-  if (loading) return <AppText>Chargement…</AppText>;
+ 
 
   return (
+      <SafeAreaView style={styles.safeArea}>
     <View style={styles.container}>
       <HeaderWithBackButton title="Paramètres" avatarUri={avatarUri || defaultAvatar} />
 
@@ -220,10 +221,12 @@ export default function SettingsScreen() {
         </View>
       </Modal>
     </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, backgroundColor: '#fff' },
   scrollContent: { padding: 20 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#371B34', marginBottom: 10, marginTop: 20 },

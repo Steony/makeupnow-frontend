@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import AppText from './AppText';
 import ReviewModal from './ReviewModal';
@@ -17,6 +17,33 @@ function formatReviewDate(dateStr?: string) {
       minute: '2-digit',
     })
     .replace(',', ' à');
+}
+
+// Libellé de status combiné booking + payment
+function getDisplayedStatus(status: string, paymentStatus?: string) {
+  if (paymentStatus === 'FAILED') return 'Annulé';
+  if (status === 'COMPLETED' && paymentStatus === 'COMPLETED') return 'Terminé et payé';
+  if (status === 'CONFIRMED' && paymentStatus === 'PENDING') return 'Confirmé';
+  if (status === 'CANCELLED') return 'Annulé';
+  return status;
+}
+
+// Couleur status combiné
+function getStatusColor(status: string, paymentStatus?: string) {
+  // Accept both code and label (defensive)
+  if (
+    paymentStatus === 'FAILED' ||
+    status === 'CANCELLED' || status === 'Annulé'
+  ) return '#000'; 
+  if (
+    (status === 'COMPLETED' && paymentStatus === 'COMPLETED') ||
+    status === 'Terminé et payé'
+  ) return '#4CAF50'; 
+  if (
+    (status === 'CONFIRMED' && paymentStatus === 'PENDING') ||
+    status === 'Confirmé'
+  ) return '#6A0DAD';
+  return '#000';
 }
 
 interface BookingCardProps {
@@ -37,14 +64,15 @@ interface BookingCardProps {
   reviewDate?: string;
   reviewId?: string;
   duration?: number;
-  paymentId?: number;   // <-- Ajout
-  providerId?: number;  // <-- Ajout
+  paymentId?: number;   
+  paymentStatus?: string;
+  providerId?: number;  
   role: 'Admin' | 'Client' | 'Provider';
   onPressConfirm?: () => void;
   onPressCancel?: () => void;
   onPressDeleteReview?: () => void;
-  onPressModifyPayment?: () => void;
   onSubmitReview?: (rating: number, comment: string, reviewId?: string | null) => void;
+  onPressModifyPayment?: (paymentId: number, option: 'Payé' | 'Litige') => void;
 }
 
 export default function BookingCard({
@@ -66,6 +94,7 @@ export default function BookingCard({
   reviewId,
   duration,
   paymentId,
+  paymentStatus,
   providerId,
   role,
   onPressConfirm,
@@ -74,9 +103,8 @@ export default function BookingCard({
   onPressModifyPayment,
   onSubmitReview,
 }: BookingCardProps) {
-  const statusColor =
-    status === 'Confirmé' ? '#6A0DAD' :
-    status === 'Terminé et payé' ? '#4CAF50' : '#000';
+  const displayStatus = getDisplayedStatus(status, paymentStatus);
+  const statusColor = getStatusColor(status, paymentStatus);
 
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
@@ -94,9 +122,6 @@ export default function BookingCard({
     });
   };
 
-  
-
-  // Texte de confirmation selon le rôle
   const getConfirmModalText = () => {
     if (role === 'Provider') {
       return 'Êtes-vous sûr de vouloir indiquer que le paiement a bien été reçu pour cette prestation ?';
@@ -104,26 +129,18 @@ export default function BookingCard({
     return 'Êtes-vous sûr de vouloir confirmer le paiement ?';
   };
 
-  // Gestion du clic sur le bouton de confirmation (adapté Provider)
   const handleConfirmAction = async () => {
-  if (onPressConfirm) {
-    await onPressConfirm();
-  }
-  setConfirmModalVisible(false);
-};
-
+    if (onPressConfirm) {
+      await onPressConfirm();
+    }
+    setConfirmModalVisible(false);
+  };
 
   const handleCancelAction = async () => {
     if (onPressCancel) {
       await onPressCancel();
     }
     setCancelModalVisible(false);
-  };
-
-  const handleModifyPayment = (option: 'Payé' | 'Litige') => {
-    onPressModifyPayment && onPressModifyPayment();
-    showToast(`Statut du paiement : ${option}`);
-    setModifyPaymentModalVisible(false);
   };
 
   const handleOpenReviewModalForCreate = () => {
@@ -143,6 +160,13 @@ export default function BookingCard({
     showToast('Avis soumis !');
     setShowReviewModal(false);
     setIsEditingReview(false);
+  };
+
+  const handleModifyPayment = (option: 'Payé' | 'Litige') => {
+    if (paymentId && onPressModifyPayment) {
+      onPressModifyPayment(paymentId, option);
+    }
+    setModifyPaymentModalVisible(false);
   };
 
   const formatDateSchedule = (dateStr: string) => {
@@ -185,29 +209,46 @@ export default function BookingCard({
         modalTitle={isEditingReview ? 'Modifier votre avis' : 'Écrire un avis'}
       />
 
-      {/* Modal Modifier le paiement (ADMIN seulement) */}
-      <Modal transparent visible={modifyPaymentModalVisible} animationType="fade" onRequestClose={() => setModifyPaymentModalVisible(false)}>
-        <View style={styles.overlay}>
-          <View style={styles.modalContainer}>
-            <AppText style={styles.modalTitle}>Modifier le paiement</AppText>
-            <AppText style={styles.modalText}>Choisir un statut :</AppText>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity onPress={() => handleModifyPayment('Payé')} style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}>
-                <AppText style={[styles.modalButtonText, { color: '#fff' }]}>Payé</AppText>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleModifyPayment('Litige')} style={[styles.modalButton, { backgroundColor: '#e54d4d' }]}>
-                <AppText style={[styles.modalButtonText, { color: '#fff' }]}>Litige</AppText>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={[styles.modalButton, { marginTop: 10, alignSelf: 'center' }]}
-              onPress={() => setModifyPaymentModalVisible(false)}
-            >
-              <AppText style={styles.modalButtonText}>Annuler</AppText>
-            </TouchableOpacity>
-          </View>
+      <Modal
+  transparent
+  visible={modifyPaymentModalVisible}
+  animationType="fade"
+  onRequestClose={() => setModifyPaymentModalVisible(false)}
+>
+  <View style={styles.overlay}>
+    <View style={styles.modalContainer}>
+      <ScrollView
+        contentContainerStyle={{ alignItems: 'center', paddingBottom: 10 }}
+        style={{ width: '100%' }}
+        showsVerticalScrollIndicator={false}
+      >
+        <AppText style={styles.modalTitle}>Modifier le paiement</AppText>
+        <AppText style={styles.modalText}>Choisir un statut :</AppText>
+        <View style={styles.modalButtons}>
+          <TouchableOpacity
+            onPress={() => handleModifyPayment('Payé')}
+            style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
+          >
+            <AppText style={[styles.modalButtonText, { color: '#fff' }]}>Payé</AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleModifyPayment('Litige')}
+            style={[styles.modalButton, { backgroundColor: '#e54d4d' }]}
+          >
+            <AppText style={[styles.modalButtonText, { color: '#fff' }]}>Litige</AppText>
+          </TouchableOpacity>
         </View>
-      </Modal>
+        <TouchableOpacity
+          style={[styles.modalButton, { marginTop: 10, alignSelf: 'center' }]}
+          onPress={() => setModifyPaymentModalVisible(false)}
+        >
+          <AppText style={styles.modalButtonText}>Annuler</AppText>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
 
       {/* Modal confirmer paiement (texte selon rôle) */}
       <Modal transparent visible={confirmModalVisible} animationType="fade" onRequestClose={() => setConfirmModalVisible(false)}>
@@ -252,15 +293,34 @@ export default function BookingCard({
           <AppText style={styles.date}>
             {formatDateSchedule(dateSchedule)} à {formatTimeSchedule(timeSchedule)}
           </AppText>
-          {status === 'Annulé' && (
+          {displayStatus === 'Annulé' && (
             <AppText style={{ color: '#a478dd', fontWeight: 'bold', marginTop: 10 }}>
               Cette réservation a été annulée.
             </AppText>
           )}
         </View>
         <View style={{ alignItems: 'flex-end', marginLeft: 10 }}>
-          <AppText style={[styles.status, { color: statusColor }]}>{status}</AppText>
+          <AppText style={[styles.status, { color: statusColor }]}>{displayStatus}</AppText>
           <AppText style={styles.price}>{price}€</AppText>
+          {paymentStatus && (
+            <View style={[
+              styles.paymentBadge,
+              paymentStatus === 'COMPLETED'
+                ? styles.badgeGreen
+                : paymentStatus === 'FAILED'
+                  ? styles.badgeRed
+                  : styles.badgeGray
+            ]}>
+              <AppText style={styles.badgeText}>
+                Paiement :{' '}
+                {paymentStatus === 'COMPLETED'
+                  ? 'Payé'
+                  : paymentStatus === 'FAILED'
+                    ? 'Litige'
+                    : 'En attente'}
+              </AppText>
+            </View>
+          )}
         </View>
       </View>
 
@@ -307,19 +367,25 @@ export default function BookingCard({
             <AppText style={styles.reviewDateTop}>{formatReviewDate(reviewDate)}</AppText>
           </View>
           <AppText style={styles.reviewText}>{review}</AppText>
-          {(role === 'Client' || role === 'Admin') && (
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 1 }}>
-              <TouchableOpacity
-                onPress={handleOpenReviewModalForEdit}
-                style={[styles.confirmButton, { paddingVertical: 6, paddingHorizontal: 12 }]}
-              >
-                <AppText style={styles.buttonText}>Modifier l’avis</AppText>
-              </TouchableOpacity>
-            </View>
+          {role === 'Client' && (
+            <TouchableOpacity
+              onPress={handleOpenReviewModalForEdit}
+              style={[styles.confirmButton, { paddingVertical: 8, paddingHorizontal: 12 }]}
+            >
+              <AppText style={styles.buttonText}>Modifier l’avis</AppText>
+            </TouchableOpacity>
+          )}
+          {role === 'Admin' && (
+            <TouchableOpacity
+              onPress={onPressDeleteReview}
+              style={styles.deleteReviewButton}
+            >
+              <AppText style={styles.buttonText}>Supprimer l’avis</AppText>
+            </TouchableOpacity>
           )}
         </View>
       ) : (
-        role === 'Client' && status !== 'Annulé' && (
+        role === 'Client' && displayStatus !== 'Annulé' && (
           <TouchableOpacity
             onPress={handleOpenReviewModalForCreate}
             style={[styles.writeReviewButton, { marginTop: 10 }]}
@@ -329,35 +395,31 @@ export default function BookingCard({
         )
       )}
 
-      {/* Boutons principaux selon rôle */}
-      {role === 'Admin' && (
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.confirmButton} onPress={() => setConfirmModalVisible(true)}>
-            <AppText style={styles.buttonText}>Confirmer le paiement</AppText>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.confirmButton} onPress={() => setModifyPaymentModalVisible(true)}>
-            <AppText style={styles.buttonText}>Modifier le paiement</AppText>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => setCancelModalVisible(true)}>
-            <AppText style={styles.buttonText}>Annuler la réservation</AppText>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {role === 'Client' && status !== 'Annulé' && (
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => setCancelModalVisible(true)}>
-            <AppText style={styles.buttonText}>Annuler la réservation</AppText>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Afficher "Annuler la réservation" uniquement si pas annulé */}
+      {(role === 'Client' || role === 'Admin') && displayStatus !== 'Annulé' && (
+  <View style={styles.buttonRow}>
+    <TouchableOpacity style={styles.cancelButton} onPress={() => setCancelModalVisible(true)}>
+      <AppText style={styles.buttonText}>Annuler la réservation</AppText>
+    </TouchableOpacity>
+  </View>
+)}
 
       {/* PROVIDER → "Paiement reçu" */}
-      {role === 'Provider' && status === 'Confirmé' && (
-  <TouchableOpacity style={styles.confirmButton} onPress={() => setConfirmModalVisible(true)}>
-    <AppText style={styles.buttonText}>Paiement reçu</AppText>
-  </TouchableOpacity>
-)}
+      {role === 'Provider' && displayStatus === 'Confirmé' && paymentStatus !== 'COMPLETED' && (
+        <TouchableOpacity style={styles.confirmButton} onPress={() => setConfirmModalVisible(true)}>
+          <AppText style={styles.buttonText}>Paiement reçu</AppText>
+        </TouchableOpacity>
+      )}
+
+      {/* ADMIN → "Modifier le paiement" */}
+      {role === 'Admin' && (
+        <TouchableOpacity
+          style={styles.modifyPaymentButton}
+          onPress={() => setModifyPaymentModalVisible(true)}
+        >
+          <AppText style={styles.buttonText}>Modifier le paiement</AppText>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -369,10 +431,13 @@ const styles = StyleSheet.create({
     padding: 17,
     marginBottom: 29,
     shadowColor: '#000',
-    shadowOpacity: 0.8,
+    shadowOpacity: 0.3,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
+    maxWidth: 340,        
+    alignSelf: 'center',  
+    width: '95%',  
   },
   header: {
     flexDirection: 'row',
@@ -381,7 +446,7 @@ const styles = StyleSheet.create({
   },
   title: { fontWeight: 'bold', fontSize: 17, color: '#000' },
   status: { fontWeight: 'bold', fontSize: 17 },
-  price: { fontWeight: 'bold', fontSize: 18, color: '#000', marginTop: 10, marginRight: 15 },
+  price: { fontWeight: 'bold', fontSize: 18, color: '#000', marginTop: 10, marginRight: 8 },
   date: { fontSize: 15, color: '#000', marginTop: 2, marginBottom: 0 },
   row: { flexDirection: 'row', alignItems: 'center', marginVertical: 1 },
   icon: { width: 28, height: 28, marginRight: 4 },
@@ -399,27 +464,39 @@ const styles = StyleSheet.create({
   reviewDate: { fontSize: 14, color: '#000', marginVertical: 4, marginBottom: 6 },
   reviewText: { fontSize: 14, color: '#000', fontWeight: 'bold', marginTop: 8 },
   buttonRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',      
     justifyContent: 'flex-end',
-    marginTop: 10,
+    marginTop: 5,
+    gap: 10, 
   },
   confirmButton: {
     backgroundColor: '#a478dd',
     borderRadius: 5,
-    padding: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     marginRight: 7,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 15,
+    alignSelf: 'flex-end',
+    marginTop: 7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
+    fontFamily: 'Inter_400Regular',
   },
   cancelButton: {
     backgroundColor: '#000',
     borderRadius: 5,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    alignSelf: 'flex-start',
-    marginTop: 10,
-    marginBottom: 10,
+    alignItems: 'center',
+    marginTop: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
+    fontFamily: 'Inter_400Regular',
   },
   buttonText: { color: '#fff' },
   overlay: {
@@ -453,6 +530,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 5,
     backgroundColor: '#a478dd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
+    fontFamily: 'Inter_400Regular',
   },
   reviewDateTop: {
     fontSize: 13,
@@ -460,5 +543,57 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',
     marginLeft: 8,
     alignSelf: 'flex-start',
+  },
+  paymentStatus: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#555',
+  },
+  paymentBadge: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  badgeGreen: {
+    backgroundColor: '#25AB2B',
+  },
+  badgeRed: {
+    backgroundColor: '#E32C2C',
+  },
+  badgeGray: {
+    backgroundColor: '#626262',
+  },
+  deleteReviewButton: {
+    backgroundColor: '#AD2A2D',
+    borderRadius: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-end',
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  modifyPaymentButton: {
+    backgroundColor: '#A77DE1',
+    borderRadius: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 5,
+    alignItems: 'center',
+    marginTop: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
+    fontFamily: 'Inter_400Regular',
   },
 });

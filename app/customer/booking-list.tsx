@@ -147,11 +147,17 @@ export default function BookingList() {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
+  const sortedBookings = filteredBookings.sort((a, b) => {
+  const dateA = new Date(getDateSchedule(a)).getTime();
+  const dateB = new Date(getDateSchedule(b)).getTime();
+  return dateB - dateA; // Tri décroissant : plus récent en premier
+});
+
+
   // Annulation de réservation
   const handleCancel = async (bookingId: number) => {
     try {
       await api.put(`/bookings/${bookingId}/cancel`);
-      showToast('Réservation annulée ✅');
       await loadBookings();
     } catch (err: any) {
       showToast('Erreur d’annulation', 'error');
@@ -208,6 +214,7 @@ export default function BookingList() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+       <ScrollView contentContainerStyle={styles.scrollContainer}>
       <HeaderGradient
         title="Mes réservations"
         showMenu
@@ -236,9 +243,9 @@ export default function BookingList() {
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+     
         <View style={styles.bookingList}>
-          {filteredBookings.map(booking => (
+          {sortedBookings.map(booking => (
             <BookingCard
               key={booking.id + '-' + (booking.review?.id || 'noreview')}
               title={getServiceTitle(booking)}
@@ -250,6 +257,8 @@ export default function BookingList() {
               providerName={getProviderName(booking)}
               providerEmail={getProviderEmail(booking)}
               providerPhone={getProviderPhone(booking)}
+              paymentId={booking.payment?.id} 
+              paymentStatus={booking.paymentStatus}
               rating={booking.review?.rating}
               review={booking.review?.comment}
               reviewDate={booking.review?.dateComment}
@@ -303,7 +312,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   scrollContainer: {
-    padding: 16,
+   
   },
   bookingList: {
     gap: 5,

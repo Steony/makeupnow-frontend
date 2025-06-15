@@ -1,12 +1,13 @@
 import AppText from '@/components/ui/AppText';
 import React, { useEffect, useState } from 'react';
 import { Modal, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 interface ScheduleModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (slotData: { date: string; startTime: string; endTime: string }) => void;
-  initialData?: { date: string; startTime: string; endTime: string }; // Pour modification
+  initialData?: { date: string; startTime: string; endTime: string };
   mode?: 'add' | 'edit';
 }
 
@@ -38,20 +39,34 @@ export default function ScheduleModal({
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
     if (!dateRegex.test(date)) {
-      alert("Date invalide. Format attendu : AAAA-MM-JJ (ex: 2025-06-10)");
+      Toast.show({
+        type: 'error',
+        text1: 'Format de date invalide',
+        text2: 'Utilisez le format AAAA-MM-JJ (ex: 2025-06-10)',
+      });
       return;
     }
     if (!timeRegex.test(startTime)) {
-      alert("Heure de début invalide. Format attendu : HH:mm (ex: 09:00)");
+      Toast.show({
+        type: 'error',
+        text1: "Heure de début invalide",
+        text2: "Format attendu : HH:mm (ex: 09:00)",
+      });
       return;
     }
     if (!timeRegex.test(endTime)) {
-      alert("Heure de fin invalide. Format attendu : HH:mm (ex: 13:00)");
+      Toast.show({
+        type: 'error',
+        text1: "Heure de fin invalide",
+        text2: "Format attendu : HH:mm (ex: 13:00)",
+      });
       return;
     }
 
     onSubmit({ date, startTime, endTime });
-    // onClose est appelé après succès dans le parent pour éviter fermeture prématurée
+
+  
+    
   };
 
   return (
@@ -68,6 +83,7 @@ export default function ScheduleModal({
             value={date}
             onChangeText={setDate}
             placeholder="Ex: 2025-06-10"
+            placeholderTextColor="#999"
           />
 
           <AppText style={styles.label}>Heure de début</AppText>
@@ -75,7 +91,8 @@ export default function ScheduleModal({
             style={styles.input}
             value={startTime}
             onChangeText={setStartTime}
-            placeholder="Ex: 11:00"
+            placeholder="Ex: 09:00"
+            placeholderTextColor="#999"
           />
 
           <AppText style={styles.label}>Heure de fin</AppText>
@@ -84,6 +101,7 @@ export default function ScheduleModal({
             value={endTime}
             onChangeText={setEndTime}
             placeholder="Ex: 13:00"
+            placeholderTextColor="#999"
           />
 
           <TouchableOpacity style={styles.button} onPress={handleSubmit}>

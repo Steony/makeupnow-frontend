@@ -11,38 +11,33 @@ import Toast from 'react-native-toast-message';
 export default function BookingSummaryScreen() {
   const router = useRouter();
   const {
-  providerId,
-  serviceId,
-  scheduleId,
-  totalPrice,
-  customerId,
-  providerName,
-  providerAddress,
-  serviceTitle,
-  serviceDuration,
-  clientName,
-} = useLocalSearchParams<{
-  providerId: string;
-  serviceId: string;
-  scheduleId: string;
-  totalPrice: string;
-  customerId: string;
-  providerName?: string;
-  providerAddress?: string;
-  serviceTitle?: string;
-  serviceDuration?: string;
-  clientName?: string;
-}>();
+    providerId,
+    serviceId,
+    scheduleId,
+    totalPrice,
+    customerId,
+    providerName,
+    providerAddress,
+    serviceTitle,
+    serviceDuration,
+    clientName,
+  } = useLocalSearchParams<{
+    providerId: string;
+    serviceId: string;
+    scheduleId: string;
+    totalPrice: string;
+    customerId: string;
+    providerName?: string;
+    providerAddress?: string;
+    serviceTitle?: string;
+    serviceDuration?: string;
+    clientName?: string;
+  }>();
 
-
-  // State pour loader + erreur + booking créé
   const [loading, setLoading] = useState(false);
   const [bookingDetails, setBookingDetails] = useState<any>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
-  // Tu peux ici éventuellement faire un petit fetch GET pour display les labels, ou tout passer en params selon ton flow.
-
-  // ➡️ Ce bouton crée la réservation
   const handleConfirmReservation = async () => {
     setLoading(true);
     setBookingError(null);
@@ -57,55 +52,67 @@ export default function BookingSummaryScreen() {
       });
       return;
     }
-   try {
-  const response = await api.post('/bookings', {
-    providerId: Number(providerId),
-    serviceId: Number(serviceId),
-    scheduleId: Number(scheduleId),
-    customerId: Number(customerId),
-    totalPrice: Number(totalPrice),
-  });
 
-  console.log('Réponse brute du serveur:', response.data);
-
-  let data = response.data;
-  if (typeof data === 'string') {
     try {
-      data = JSON.parse(data);
-    } catch  {
-      console.warn('Parsing JSON échoué, on continue quand même');
-      data = null;  // ou ce que tu veux
-      // NE PAS return ici
-    }
-  }
+      const response = await api.post('/bookings', {
+        providerId: Number(providerId),
+        serviceId: Number(serviceId),
+        scheduleId: Number(scheduleId),
+        customerId: Number(customerId),
+        totalPrice: Number(totalPrice),
+      });
 
-  setBookingDetails(data);
-  Toast.show({
-    type: 'success',
-    text1: 'Réservation confirmée !',
-    text2: 'Votre réservation a bien été enregistrée.',
-    topOffset: 100,
+      console.log('Réponse brute du serveur:', response.data);
+
+      let data = response.data;
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          console.warn('Parsing JSON échoué, on continue quand même');
+          data = null;
+        }
+      }
+
+      setBookingDetails(data);
+
+      // 🔁 Création du paiement après la réservation
+if (data?.id) {
+  const paymentResponse = await api.post('/payments', {
+    bookingId: data.id,
+    amount: data.totalPrice,
+    status: 'En attente',
   });
 
-  // Forcer la redirection dans tous les cas, même si parsing a échoué
-  setTimeout(() => {
-    router.push('/customer/booking-list');
-  }, 1500);
+  const paymentData = paymentResponse.data;
 
-} catch (error: any) {
-  setBookingError('Impossible de créer la réservation.');
-  Toast.show({
-    type: 'error',
-    text1: 'Erreur',
-    text2: error?.response?.data?.message || 'Impossible de créer la réservation.',
-  });
-} finally {
-  setLoading(false);
+  // Mise à jour de bookingDetails avec le statut de paiement
+  setBookingDetails({ ...data, paymentStatus: paymentData.status });
 }
 
+
+      Toast.show({
+        type: 'success',
+        text1: 'Réservation confirmée !',
+        text2: 'Votre réservation a bien été enregistrée.',
+        topOffset: 100,
+      });
+
+      setTimeout(() => {
+        router.push('/customer/booking-list');
+      }, 1500);
+    } catch (error: any) {
+      setBookingError('Impossible de créer la réservation.');
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: error?.response?.data?.message || 'Impossible de créer la réservation.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Format date selon ton DTO, sinon adapte
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -121,7 +128,6 @@ export default function BookingSummaryScreen() {
     return new Intl.DateTimeFormat('fr-FR', options).format(date);
   };
 
-  // ➡️ Affiche les infos du récap, SANS créer de booking tant que bouton pas pressé
   return (
     <SafeAreaView style={styles.safeArea}>
       <HeaderWithBackButton
@@ -137,18 +143,16 @@ export default function BookingSummaryScreen() {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <AppText style={styles.title}>Récapitulatif de la réservation</AppText>
 
-          {/* Passe les params récupérés directement ou enrichis ici */}
           <BookingSummaryCard
-  date={formatDate(bookingDetails?.dateSchedule || '')}
-  provider={bookingDetails?.providerName || providerName || ''}
-  service={bookingDetails?.serviceTitle || serviceTitle || ''}
-  address={bookingDetails?.providerAddress || providerAddress || ''}
-  duration={bookingDetails?.serviceDuration || serviceDuration || ''}
-  clientName={bookingDetails?.customerName || clientName || ''}
-  price={Number(bookingDetails?.totalPrice ?? totalPrice ?? 0)}
-/>
-
-
+            date={formatDate(bookingDetails?.dateSchedule || '')}
+            provider={bookingDetails?.providerName || providerName || ''}
+            service={bookingDetails?.serviceTitle || serviceTitle || ''}
+            address={bookingDetails?.providerAddress || providerAddress || ''}
+            duration={bookingDetails?.serviceDuration || serviceDuration || ''}
+            clientName={bookingDetails?.customerName || clientName || ''}
+            price={Number(bookingDetails?.totalPrice ?? totalPrice ?? 0)}
+             paymentStatus={bookingDetails?.paymentStatus || 'PENDING'}
+          />
 
           <TouchableOpacity style={styles.validateButton} onPress={handleConfirmReservation}>
             <AppText style={styles.validateButtonText}>Confirmer la réservation</AppText>
@@ -164,7 +168,24 @@ export default function BookingSummaryScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   scrollContainer: { flexGrow: 1, padding: 16 },
-  title: { fontSize: 18, fontWeight: '600', color: '#000', marginBottom: 30, textAlign: 'center', marginTop: 20 },
-  validateButton: { backgroundColor: '#7946CD', borderRadius: 5, paddingVertical: 14, margin: 16, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.9, shadowRadius: 9, elevation: 2 },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 30,
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  validateButton: {
+    backgroundColor: '#7946CD',
+    borderRadius: 5,
+    paddingVertical: 14,
+    margin: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 2,
+  },
   validateButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 18 },
 });

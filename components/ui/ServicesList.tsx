@@ -1,7 +1,7 @@
 import { api } from '@/config/api';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 // 👉 Types pour props et services
@@ -51,24 +51,23 @@ const ServicesList: React.FC<ServicesListProps> = ({ services, onEdit, refreshSe
       setModalVisible(false);
       setServiceToDelete(null);
       refreshServices();
-    } catch  {
+    } catch {
       setModalVisible(false);
       setServiceToDelete(null);
       Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: "Impossible de supprimer ce service.",
-      });
+  type: 'error',
+  text1: 'Suppression impossible',
+  text2: 'Impossible de supprimer une prestation qui a déjà des réservations.',
+});
+
     }
   };
 
   return (
     <>
-      <FlatList
-        data={services}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+        {services.map((item) => (
+          <View key={item.id} style={styles.card}>
             <View style={styles.rowBetween}>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.price}>{item.price}€</Text>
@@ -95,9 +94,8 @@ const ServicesList: React.FC<ServicesListProps> = ({ services, onEdit, refreshSe
               </View>
             </View>
           </View>
-        )}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      />
+        ))}
+      </ScrollView>
 
       {/* Modal de confirmation */}
       <Modal
@@ -178,17 +176,21 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   button: {
-    backgroundColor: '#d3c4d8',
+    borderWidth: 1,
+    borderColor: '#000',
     borderRadius: 6,
-    paddingHorizontal: 10,
     paddingVertical: 6,
-    marginHorizontal: 4,
+    paddingHorizontal: 14,
   },
   deleteButton: {
     backgroundColor: '#333',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginLeft: 45,
   },
   buttonText: {
-    fontSize: 13,
+    fontSize: 16,
     color: '#000',
   },
   deleteButtonText: {

@@ -4,7 +4,9 @@ import { api } from '@/config/api';
 import { useAuth } from '@/utils/AuthContext';
 import React, { useEffect, useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -27,14 +29,14 @@ interface AddServiceModalProps {
   visible: boolean;
   onClose: () => void;
   onServiceAdded: () => void;
-  serviceToEdit?: MakeupService | null; // MODIF : service à modifier (optionnel)
+  serviceToEdit?: MakeupService | null;
 }
 
 export default function AddServiceModal({
   visible,
   onClose,
   onServiceAdded,
-  serviceToEdit = null, // MODIF : valeur par défaut null
+  serviceToEdit = null,
 }: AddServiceModalProps) {
   const { currentUser } = useAuth();
   const [title, setTitle] = useState('');
@@ -45,7 +47,6 @@ export default function AddServiceModal({
   const [duration, setDuration] = useState('');
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
 
-  // MODIF : Remplir les champs si serviceToEdit change
   useEffect(() => {
     if (serviceToEdit) {
       setTitle(serviceToEdit.title);
@@ -80,7 +81,6 @@ export default function AddServiceModal({
 
     try {
       if (serviceToEdit) {
-        // MODIF : PUT ou PATCH pour modifier
         await api.put(`/makeup-services/${serviceToEdit.id}`, {
           title,
           categoryId,
@@ -91,7 +91,6 @@ export default function AddServiceModal({
         });
         Toast.show({ type: 'success', text1: 'Prestation modifiée !' });
       } else {
-        // POST pour création
         await api.post('/makeup-services', {
           title,
           categoryId,
@@ -121,90 +120,98 @@ export default function AddServiceModal({
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
-        <ScrollView contentContainerStyle={styles.modalContainer}>
-          <AppText style={styles.title}>
-            {serviceToEdit ? 'Modifier une prestation' : 'Ajouter une prestation'}
-          </AppText>
-
-          <AppText style={styles.label}>Titre</AppText>
-          <TextInput
-            style={styles.input}
-            placeholder="Titre de la prestation"
-            value={title}
-            onChangeText={setTitle}
-          />
-
-          <AppText style={styles.label}>Catégorie</AppText>
-          <TouchableOpacity
-            style={[styles.input, { justifyContent: 'center' }]}
-            onPress={() => setIsCategoryModalVisible(true)}
-          >
-            <AppText style={{ color: categoryTitle ? '#000' : '#999' }}>
-              {categoryTitle || 'Sélectionner une catégorie'}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}
+        >
+          <ScrollView contentContainerStyle={styles.modalContainer} keyboardShouldPersistTaps="handled">
+            <AppText style={styles.title}>
+              {serviceToEdit ? 'Modifier une prestation' : 'Ajouter une prestation'}
             </AppText>
-          </TouchableOpacity>
 
-          <AppText style={styles.label}>Description</AppText>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Description"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-          />
+            <AppText style={styles.label}>Titre</AppText>
+            <TextInput
+              style={styles.input}
+              placeholder="Titre de la prestation"
+              value={title}
+              onChangeText={setTitle}
+            />
 
-          <View style={styles.rowContainer}>
-            <View style={styles.rowItem}>
-              <AppText style={styles.label}>Prix (€)</AppText>
-              <TextInput
-                style={styles.input}
-                placeholder="Prix"
-                keyboardType="numeric"
-                value={price}
-                onChangeText={setPrice}
-              />
+            <AppText style={styles.label}>Catégorie</AppText>
+            <TouchableOpacity
+              style={[styles.input, { justifyContent: 'center' }]}
+              onPress={() => setIsCategoryModalVisible(true)}
+            >
+              <AppText style={{ color: categoryTitle ? '#000' : '#999' }}>
+                {categoryTitle || 'Sélectionner une catégorie'}
+              </AppText>
+            </TouchableOpacity>
+
+            <AppText style={styles.label}>Description</AppText>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Description"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
+
+            <View style={styles.rowContainer}>
+              <View style={styles.rowItem}>
+                <AppText style={styles.label}>Prix (€)</AppText>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Prix"
+                  keyboardType="numeric"
+                  value={price}
+                  onChangeText={setPrice}
+                />
+              </View>
+
+              <View style={styles.rowItem}>
+                <AppText style={styles.label}>Durée (min)</AppText>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Durée"
+                  keyboardType="numeric"
+                  value={duration}
+                  onChangeText={setDuration}
+                />
+              </View>
             </View>
 
-            <View style={styles.rowItem}>
-              <AppText style={styles.label}>Durée (min)</AppText>
-              <TextInput
-                style={styles.input}
-                placeholder="Durée"
-                keyboardType="numeric"
-                value={duration}
-                onChangeText={setDuration}
-              />
-            </View>
-          </View>
+            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+              <AppText style={styles.buttonText}>
+                {serviceToEdit ? 'Modifier' : 'Valider'}
+              </AppText>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-            <AppText style={styles.buttonText}>
-              {serviceToEdit ? 'Modifier' : 'Valider'}
-            </AppText>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                onClose();
+                resetForm();
+              }}
+            >
+              <AppText style={styles.closeButtonText}>Fermer</AppText>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.closeButton} onPress={() => {
-            onClose();
-            resetForm();
-          }}>
-            <AppText style={styles.closeButtonText}>Fermer</AppText>
-          </TouchableOpacity>
-
-          <FilterModalCategory
-            visible={isCategoryModalVisible}
-            onClose={() => setIsCategoryModalVisible(false)}
-            onSelect={(selected) => {
-              if (selected.length > 0) {
-                setCategoryId(selected[0].id);
-                setCategoryTitle(selected[0].title);
-              } else {
-                setCategoryId(null);
-                setCategoryTitle('');
-              }
-              setIsCategoryModalVisible(false);
-            }}
-          />
-        </ScrollView>
+            <FilterModalCategory
+              visible={isCategoryModalVisible}
+              onClose={() => setIsCategoryModalVisible(false)}
+              onSelect={(selected) => {
+                if (selected.length > 0) {
+                  setCategoryId(selected[0].id);
+                  setCategoryTitle(selected[0].title);
+                } else {
+                  setCategoryId(null);
+                  setCategoryTitle('');
+                }
+                setIsCategoryModalVisible(false);
+              }}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -212,19 +219,21 @@ export default function AddServiceModal({
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    width: '90%',
-    padding: 20,
-    marginVertical: 50,
-    marginLeft: 20,
-  },
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.4)',
+  justifyContent: 'flex-start',    // Au lieu de 'center'
+  alignItems: 'center',
+},
+modalContainer: {
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  width: '90%',
+  padding: 30,
+  alignSelf: 'center',
+  marginTop: 90,       
+  marginBottom: 30,   
+},
+
   title: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -235,20 +244,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '500',
-    marginTop: 12,
+    marginTop: 30,
     marginBottom: 4,
   },
   input: {
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 30,
+    paddingVertical: 10,
     fontSize: 14,
     backgroundColor: '#f9f9f9',
   },
   textArea: {
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
   rowContainer: {
@@ -263,7 +272,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#a478dd',
     paddingVertical: 12,
     borderRadius: 8,
-    marginTop: 20,
+    marginTop: 29,
     alignItems: 'center',
   },
   buttonText: {
@@ -271,11 +280,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   closeButton: {
-    marginTop: 10,
+    marginTop: 20,
     alignItems: 'center',
   },
   closeButtonText: {
-    color: '#a478dd',
+    color: '#000',
     textDecorationLine: 'underline',
   },
 });

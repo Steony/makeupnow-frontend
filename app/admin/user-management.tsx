@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 
-// --------- AJOUT FONCTION UTILE ---------
+
 function getDateSchedule(booking:any) {
   // Cas 1 : Backend renvoie déjà date au format JJ/MM/AA ou JJ/MM/AAAA
   if (booking.dateSchedule && booking.dateSchedule.includes('/')) return booking.dateSchedule;
@@ -66,10 +66,6 @@ function getTimeSchedule(booking: any) {
 }
 
 
-
-
-
-
 export default function UserManagementScreen() {
   const { currentUser } = useAuth();
   const router = useRouter();
@@ -84,8 +80,10 @@ export default function UserManagementScreen() {
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [logs, setLogs] = useState<any[]>([]);
-  const [showRecentActions, setShowRecentActions] = useState(false);
+  const [userLogs, setUserLogs] = useState<{ [userId: number]: any[] }>({});
+
+  const [openRecentActions, setOpenRecentActions] = useState<{ [userId: number]: boolean }>({});
+
 
   // Bookings
   const [userBookings, setUserBookings] = useState<{ [userId: number]: any[] }>({});
@@ -198,27 +196,31 @@ export default function UserManagementScreen() {
 
   // --- LOGS
   const loadLogs = async (userId: number) => {
-    if (!userId) return setLogs([]);
-    try {
-      let res = await api.get(`/user-action-logs/user/${userId}`)
-      let data = res.data;
-      if (typeof data === 'string') {
-        try {
-          if (data.startsWith('[') && data.includes('][')) {
-            const parts = data.split('][');
-            data = parts[0] + ']';
-          }
-          data = JSON.parse(data);
-        } catch { setLogs([]); return; }
-      }
-      setLogs(Array.isArray(data) ? data : []);
-    } catch { setLogs([]); }
-  };
+  if (!userId) return;
+  try {
+    let res = await api.get(`/user-action-logs/user/${userId}`)
+    let data = res.data;
+    if (typeof data === 'string') {
+      try {
+        if (data.startsWith('[') && data.includes('][')) {
+          const parts = data.split('][');
+          data = parts[0] + ']';
+        }
+        data = JSON.parse(data);
+      } catch { data = []; }
+    }
+    setUserLogs(prev => ({
+      ...prev,
+      [userId]: Array.isArray(data) ? data : []
+    }));
+  } catch {
+    setUserLogs(prev => ({
+      ...prev,
+      [userId]: []
+    }));
+  }
+};
 
-  useEffect(() => {
-    if (selectedUserId) loadLogs(selectedUserId);
-    else setLogs([]);
-  }, [selectedUserId]);
 
   // --- Global Action (suspend/delete) avec confirmation & toast
   const handleGlobalAction = async () => {
@@ -248,12 +250,13 @@ export default function UserManagementScreen() {
 
   // --- UI
   const Separator = () => (
-    <View style={{ height: 1, backgroundColor: '#ccc', marginHorizontal: 16 }} />
+    <View style={{ height: 0.7, backgroundColor: '#ccc', marginHorizontal: 14 }} />
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.container}>
+              <ScrollView contentContainerStyle={styles.scrollContainer}>
         <HeaderGradient
           title="Gérer les utilisateurs"
           avatarUri={adminAvatar}
@@ -326,7 +329,7 @@ export default function UserManagementScreen() {
         </Modal>
         <Separator />
 
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
+  
           {users.length === 0 && (
             <AppText style={{ color: '#a478dd', textAlign: 'center', marginTop: 24 }}>
               Aucun utilisateur trouvé
@@ -505,16 +508,14 @@ export default function UserManagementScreen() {
                           <TouchableOpacity
   style={[styles.viewAllButton, { marginTop: 18, alignSelf: 'flex-end' }]}
   onPress={() => {
-    
-    if (user.role === 'CLIENT') router.push(`/admin/user-bookings?userId=${user.id}`);
-    else if (user.role === 'PROVIDER') router.push(`/admin/user-bookings?providerId=${user.id}`);
-  
+    router.push(
+      `/admin/user-bookings?userId=${user.id}&userRole=${user.role}&userName=${user.firstname} ${user.lastname}`
+    );
   }}
 >
-  <AppText style={styles.viewAllText}>
-    Voir toutes les réservations
-  </AppText>
+  <AppText style={styles.viewAllText}>Voir toutes les réservations</AppText>
 </TouchableOpacity>
+
 
                         </View>
                       );
@@ -533,47 +534,54 @@ export default function UserManagementScreen() {
               )}
               <Separator />
 
-              {/* Actions récentes / logs */}
-              <TouchableOpacity
-                onPress={() => setShowRecentActions(!showRecentActions)}
-                style={styles.sectionHeader}
-              >
-                <AppText style={styles.sectionTitle}>Actions récentes</AppText>
-                <Image
-                  source={
-                    showRecentActions
-                      ? require('@/assets/images/arrow-up.png')
-                      : require('@/assets/images/arrow-down.png')
-                  }
-                  style={{ width: 35, height: 35 }}
-                />
-              </TouchableOpacity>
+             {/* Actions récentes / logs */}
+<TouchableOpacity
+  onPress={() => {
+    setOpenRecentActions(prev => ({
+      ...prev,
+      [user.id]: !prev[user.id]
+    }));
+    if (!userLogs[user.id]) loadLogs(user.id);
+  }}
+  style={styles.sectionHeader}
+>
+  <AppText style={styles.sectionTitle}>Actions récentes</AppText>
+  <Image
+    source={
+      openRecentActions[user.id]
+        ? require('@/assets/images/arrow-up.png')
+        : require('@/assets/images/arrow-down.png')
+    }
+    style={{ width: 35, height: 35 }}
+  />
+</TouchableOpacity>
 
-              {showRecentActions && (
-                <View style={[styles.logContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                  {logs.length === 0 ? (
-                    <AppText style={{ color: '#a478dd' }}>Aucune action récente</AppText>
-                  ) : (
-                    <View style={{ flex: 1 }}>
-                      <AppText style={[styles.logAction, { fontWeight: 'bold', fontSize: 18 }]}>
-                        {logs[0]?.id ? `#${logs[0].id} — ` : ''}
-                        {logs[0]?.action ?? logs[0]?.message}
-                      </AppText>
-                      <AppText style={styles.logDate}>
-                        {logs[0]?.timestamp
-                          ? formatDateTime(logs[0].timestamp)
-                          : logs[0]?.date ?? logs[0]?.createdAt}
-                      </AppText>
-                    </View>
-                  )}
-                  <TouchableOpacity
-                    style={styles.viewAllButton}
-                    onPress={() => router.push(`/admin/user-logs?userId=${user.id}`)}
-                  >
-                    <AppText style={styles.viewAllText}>Voir tout</AppText>
-                  </TouchableOpacity>
-                </View>
-              )}
+{openRecentActions[user.id] && (
+  <View style={[styles.logContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+    {(!userLogs[user.id] || userLogs[user.id].length === 0) ? (
+      <AppText style={{ color: '#a478dd' }}>Aucune action récente</AppText>
+    ) : (
+      <View style={{ flex: 1 }}>
+        <AppText style={[styles.logAction, { fontWeight: 'bold', fontSize: 18 }]}>
+          {userLogs[user.id][0]?.id ? `#${userLogs[user.id][0].id} — ` : ''}
+          {userLogs[user.id][0]?.action ?? userLogs[user.id][0]?.message}
+        </AppText>
+        <AppText style={styles.logDate}>
+          {userLogs[user.id][0]?.timestamp
+            ? formatDateTime(userLogs[user.id][0].timestamp)
+            : userLogs[user.id][0]?.date ?? userLogs[user.id][0]?.createdAt}
+        </AppText>
+      </View>
+    )}
+    <TouchableOpacity
+      style={styles.viewAllButton}
+      onPress={() => router.push(`/admin/user-logs?userId=${user.id}`)}
+    >
+      <AppText style={styles.viewAllText}>Voir tout</AppText>
+    </TouchableOpacity>
+  </View>
+)}
+
 
               <View style={{ height: 4, backgroundColor: '#7C7C7C', marginHorizontal: 3, marginVertical: 5 }} />
             </View>
@@ -601,11 +609,11 @@ export default function UserManagementScreen() {
               </View>
             </TouchableWithoutFeedback>
           </Modal>
+          <Footer />
         </ScrollView>
-        <Footer />
-       
         <Toast />
       </View>
+       
     </SafeAreaView>
   );
 }
@@ -632,7 +640,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.7,
+    shadowOpacity: 0.3,
     shadowRadius: 9,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3, },
@@ -646,7 +654,7 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', marginTop: 8 },
   suspendButton: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#000', borderRadius: 5, paddingVertical: 4, paddingHorizontal: 10, marginRight: 10, 
     shadowColor: '#000',
-    shadowOpacity: 0.9,
+    shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 4,
     elevation: 1, },

@@ -163,6 +163,7 @@ export default function UserLogsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.container}>
+          <ScrollView style={styles.scrollcontainer}>
         <HeaderGradient
           
           subtitle="Consultez les logs utilisateur"
@@ -204,7 +205,7 @@ export default function UserLogsScreen() {
           </TouchableWithoutFeedback>
         </Modal>
 
-        <ScrollView style={styles.logsList}>
+      
 
           {/* Utilisateur sélectionné */}
           <View style={styles.userCard}>
@@ -298,6 +299,7 @@ export default function UserLogsScreen() {
           </Modal>
 
           {/* Liste des logs triée */}
+          <View style={styles.logsWrapper}>
           {loading ? (
             <AppText style={{ textAlign: 'center', marginVertical: 20 }}>Chargement...</AppText>
           ) : sortedLogs.length === 0 ? (
@@ -313,15 +315,28 @@ export default function UserLogsScreen() {
               </View>
             ))
           )}
+          </View>
+           <Footer />
         </ScrollView>
-        <Footer />
+      
       </View>
+       
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffff' },
+  scrollcontainer: {
+
+  },
+  logsWrapper: {
+  alignSelf: 'center',
+  width: '100%',
+  maxWidth: 500, 
+  paddingHorizontal: 10,
+},
+
   filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -351,7 +366,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     marginHorizontal: 18,
-    marginTop: 5,
+    marginTop: 15,
+    marginBottom: 15,
     padding: 12,
     borderRadius: 12,
     shadowColor: '#000',
@@ -382,7 +398,7 @@ const styles = StyleSheet.create({
   sortButton: { paddingHorizontal: 10, paddingVertical: 2, borderRadius: 7, borderWidth: 1, borderColor: '#a478dd', backgroundColor: '#fff', marginRight: 10 },
   sortButtonText: { fontWeight: 'bold', color: '#a478dd' },
   tableHeader: { fontWeight: 'bold', flex: 1, fontSize: 15, color: '#381b34' },
-  logsList: { paddingHorizontal: 8 },
+
   logRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

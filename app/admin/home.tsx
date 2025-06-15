@@ -81,7 +81,7 @@ export default function HomeAdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5edf9' },
+  container: { flex: 1, backgroundColor: '#ffff' },
   profileContainer: {
     alignItems: 'center',
     marginTop: 20,

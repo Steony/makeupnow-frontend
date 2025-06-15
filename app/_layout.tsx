@@ -8,16 +8,16 @@ import { AuthProvider } from '../utils/AuthContext';
 
 export default function RootLayout() {
   return (
-    // 🟣 Enveloppe toute l’app avec AuthProvider
     <AuthProvider>
-  <Stack
-    screenOptions={{
-      headerShown: false,
-    }}
-  />
-  <Toast config={toastConfig} />
-</AuthProvider>
-
-
+      <>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Toast config={toastConfig} position="top" topOffset={170} />
+      </>
+    </AuthProvider>
   );
 }
+
